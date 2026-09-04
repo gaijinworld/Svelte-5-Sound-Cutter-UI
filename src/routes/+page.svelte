@@ -75,13 +75,13 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="min-h-screen bg-[#ececec] text-gray-900">
-	<header class="flex h-16 items-center justify-between border-b border-gray-300 bg-white px-4 shadow-sm">
-		<div class="flex items-center gap-3">
+<div class="min-h-screen overflow-x-hidden bg-[#ececec] text-gray-900">
+	<header class="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-gray-300 bg-white px-3 py-2 shadow-sm sm:px-4">
+		<div class="flex min-w-0 items-center gap-3">
 			<div class="text-xl" aria-hidden="true">🎵</div>
-			<div>
-				<h1 class="text-base font-semibold leading-tight">Gaijin World MP3 Splitter</h1>
-				<p class="text-xs text-gray-500">Local browser splitting — no server upload</p>
+			<div class="min-w-0">
+				<h1 class="truncate text-sm font-semibold leading-tight sm:text-base">Gaijin World MP3 Splitter</h1>
+				<p class="hidden text-xs text-gray-500 sm:block">Local browser splitting — no server upload</p>
 			</div>
 		</div>
 
@@ -91,10 +91,10 @@
 	</header>
 
 	{#if audioStore.file}
-		<main class="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]">
-			<section class="flex min-h-[520px] min-w-0 flex-col border-r border-gray-300 bg-[#efefef]">
-				<div class="flex-1 p-3 sm:p-4">
-					<div class="h-full min-h-[360px] rounded border border-gray-300 bg-white p-2 shadow-inner">
+		<main class="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_360px]">
+			<section class="flex min-h-[440px] min-w-0 flex-col border-gray-300 bg-[#efefef] lg:min-h-0 lg:border-r">
+				<div class="min-h-0 flex-1 p-2 sm:p-4">
+					<div class="h-full min-h-[300px] rounded border border-gray-300 bg-white p-2 shadow-inner">
 						<WaveformDisplay bind:this={waveformDisplay} />
 					</div>
 				</div>
@@ -107,7 +107,7 @@
 				/>
 			</section>
 
-			<aside class="flex min-h-[420px] flex-col bg-white">
+			<aside class="flex min-h-[360px] min-w-0 flex-col border-t border-gray-300 bg-white lg:min-h-0 lg:border-t-0">
 				<div class="min-h-0 flex-1">
 					<SplitPointsTable />
 				</div>
@@ -117,7 +117,7 @@
 			</aside>
 		</main>
 	{:else}
-		<main class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center p-6">
+		<main class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center justify-center p-4 sm:p-6">
 			<div class="w-full">
 				<AudioUploader />
 				<div class="mt-6 text-center text-sm text-gray-500">
