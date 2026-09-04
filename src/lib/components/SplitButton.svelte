@@ -4,12 +4,13 @@
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
 	import { BrowserFfmpegEngine } from '$lib/media';
-	import type { SplitResult } from '$lib/media';
+	import type { SplitMode, SplitResult } from '$lib/media';
 	import { buildZipName } from '$lib/utils/export';
 	import { buildPartName } from '$lib/utils/outputName';
 
 	type DownloadResult = SplitResult & { url: string };
 
+	let mode = $state<SplitMode>('lossless');
 	let isSplitting = $state(false);
 	let isPreparingZip = $state(false);
 	let progress = $state(0);
@@ -65,9 +66,9 @@
 				const segment = segments[index];
 				const name = buildPartName(file.name, segment.index);
 				currentPart = name;
-				statusMessage = `Splitting ${index + 1} of ${segments.length}`;
+				statusMessage = `${mode === 'lossless' ? 'Lossless' : 'Precise'} split ${index + 1} of ${segments.length}`;
 
-				const result = await engine.split(segment, name);
+				const result = await engine.split(segment, name, { mode });
 				if (cancelRequested) break;
 
 				created.push({ ...result, url: URL.createObjectURL(result.blob) });
@@ -133,6 +134,30 @@
 </script>
 
 <div class="space-y-3">
+	<fieldset class="rounded border border-gray-200 bg-gray-50 p-2" disabled={isSplitting}>
+		<legend class="px-1 text-[11px] font-semibold text-gray-600">Splitting mode</legend>
+		<label class="flex cursor-pointer items-start gap-2 py-1 text-xs">
+			<input
+				type="radio"
+				name="split-mode"
+				value="lossless"
+				checked={mode === 'lossless'}
+				onchange={() => (mode = 'lossless')}
+			/>
+			<span><strong>Fast / Lossless</strong> — copies original MP3 frames with no quality loss.</span>
+		</label>
+		<label class="flex cursor-pointer items-start gap-2 py-1 text-xs">
+			<input
+				type="radio"
+				name="split-mode"
+				value="precise"
+				checked={mode === 'precise'}
+				onchange={() => (mode = 'precise')}
+			/>
+			<span><strong>Precise</strong> — re-encodes MP3 audio for tighter requested boundaries.</span>
+		</label>
+	</fieldset>
+
 	<div class="flex gap-2">
 		<button
 			class="flex flex-1 items-center justify-center gap-2 rounded border border-gray-400 bg-[#f5f5f5] px-3 py-2 text-sm font-medium text-gray-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
@@ -203,6 +228,8 @@
 	{/if}
 
 	<p class="text-[11px] leading-4 text-gray-500">
-		Fast/lossless mode copies MP3 frames without re-encoding. A requested cut may align to a nearby MP3 frame boundary.
+		{mode === 'lossless'
+			? 'Lossless mode preserves the original MP3 stream, but cuts can align to nearby MP3 frame boundaries.'
+			: 'Precise mode re-encodes with libmp3lame quality level 2, so output quality/bitrate characteristics may differ from the source.'}
 	</p>
 </div>
