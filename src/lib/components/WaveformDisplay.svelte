@@ -1,349 +1,114 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
-	import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
-	import { regionsStore } from '$lib/stores/regionsStore.svelte';
+	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { formatTimecode, parseTimecode } from '$lib/utils/time';
 
 	let container = $state<HTMLDivElement | undefined>(undefined);
-	let minimapCanvas = $state<HTMLCanvasElement | undefined>(undefined);
 	let wavesurfer = $state<WaveSurfer | null>(null);
-	let regionsPlugin: RegionsPlugin | null = null;
 	let isReady = $state(false);
 	let isLoading = $state(false);
 	let errorMessage = $state<string | null>(null);
-	let loopRegionId = $state<string | null>(null);
-
-	const DEFAULT_SAMPLE_RATE = 44100;
-
-	// Zoom state
 	let zoomLevel = $state(1);
-	let scrollLeft = $state(0);
-	let visibleWidth = $state(1);
+
 	const MIN_ZOOM = 1;
 	const MAX_ZOOM = 500;
+	const DEFAULT_SAMPLE_RATE = 44_100;
 
-	// Format time as mm:ss.ms
-	function formatTime(seconds: number): string {
-		const mins = Math.floor(seconds / 60);
-		const secs = Math.floor(seconds % 60);
-		const ms = Math.floor((seconds % 1) * 100);
-		return `${mins}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-	}
-
-	function applyLoopMode() {
-		if (!wavesurfer) return;
-		wavesurfer.getMediaElement().loop = audioStore.loopPlayback && loopRegionId === null;
-	}
-
-	function playRegionInternal(regionId: string) {
-		const region = regionsPlugin?.getRegions().find((r) => r.id === regionId);
-		if (!region) return;
-
-		loopRegionId = audioStore.loopPlayback ? region.id : null;
-		applyLoopMode();
-		region.play(true); // true = stop at region end
-	}
+	let selectedPoint = $derived(
+		splitStore.points.find((point) => point.id === splitStore.selectedPointId) ?? null
+	);
 
 	function initWaveSurfer() {
 		if (!container) return;
 
-		// Initialize regions plugin
-		regionsPlugin = RegionsPlugin.create();
-
-		// Create WaveSurfer instance
 		wavesurfer = WaveSurfer.create({
 			container,
-			waveColor: '#4ade80',
-			progressColor: '#22d3ee',
-			cursorColor: '#f472b6',
+			waveColor: '#dc5a16',
+			progressColor: '#2563eb',
+			cursorColor: '#111827',
 			cursorWidth: 2,
-			height: 128,
+			height: 210,
 			barWidth: 2,
 			barGap: 1,
-			barRadius: 2,
+			barRadius: 1,
 			normalize: true,
 			minPxPerSec: 1,
-			sampleRate: DEFAULT_SAMPLE_RATE,
-			plugins: [regionsPlugin]
+			sampleRate: DEFAULT_SAMPLE_RATE
 		});
 
-		// Events
 		wavesurfer.on('ready', () => {
 			isReady = true;
 			isLoading = false;
+			errorMessage = null;
 			audioStore.setBuffer(wavesurfer?.getDecodedData() ?? null);
-			applyLoopMode();
-			updateViewport();
-			drawMinimap();
+			audioStore.setCurrentTime(0);
 		});
 
 		wavesurfer.on('loading', () => {
 			isLoading = true;
 		});
 
-		wavesurfer.on('play', () => {
-			audioStore.setPlaying(true);
-		});
+		wavesurfer.on('play', () => audioStore.setPlaying(true));
+		wavesurfer.on('pause', () => audioStore.setPlaying(false));
+		wavesurfer.on('timeupdate', (time) => audioStore.setCurrentTime(time));
+		wavesurfer.on('finish', () => audioStore.setPlaying(false));
 
-		wavesurfer.on('pause', () => {
-			audioStore.setPlaying(false);
-		});
-
-		wavesurfer.on('timeupdate', (time) => {
-			audioStore.setCurrentTime(time);
-		});
-
-		wavesurfer.on('finish', () => {
-			audioStore.setPlaying(false);
-		});
-
-		wavesurfer.on('scroll', () => {
-			updateViewport();
-		});
-
-		wavesurfer.on('zoom', () => {
-			updateViewport();
-		});
-
-		wavesurfer.on('error', (err) => {
-			console.error('WaveSurfer error:', err);
+		wavesurfer.on('error', (error) => {
 			isLoading = false;
 			isReady = false;
-			errorMessage = err instanceof Error ? err.message : 'Failed to load audio file';
-		});
-
-		// Region events
-		regionsPlugin.on('region-created', (region) => {
-			const existing = regionsStore.regions.find((r) => r.id === region.id);
-			if (!existing) {
-				const newRegion = regionsStore.add(region.start, region.end);
-				region.id = newRegion.id;
-				region.setOptions({ color: newRegion.color });
-			}
-			drawMinimap();
-		});
-
-		regionsPlugin.on('region-updated', (region) => {
-			regionsStore.update(region.id, {
-				start: region.start,
-				end: region.end
-			});
-			drawMinimap();
-		});
-
-		regionsPlugin.on('region-clicked', (region, e) => {
-			e.stopPropagation();
-			regionsStore.select(region.id);
-		});
-
-		// Double-click to play region
-		regionsPlugin.on('region-double-clicked', (region, e) => {
-			e.stopPropagation();
-			regionsStore.select(region.id);
-			playRegionInternal(region.id);
-		});
-
-		regionsPlugin.on('region-out', (region) => {
-			if (loopRegionId === region.id && audioStore.loopPlayback && audioStore.isPlaying) {
-				region.play(true);
-			}
-		});
-
-		regionsPlugin.enableDragSelection({
-			color: 'rgba(255, 99, 132, 0.4)'
+			errorMessage = error instanceof Error ? error.message : 'Failed to load audio file';
 		});
 	}
 
-	function updateViewport() {
-		if (!wavesurfer || !container) return;
-
-		const wrapper = container.querySelector('div');
-		if (!wrapper) return;
-
-		const scrollWidth = wrapper.scrollWidth;
-		const clientWidth = wrapper.clientWidth;
-
-		scrollLeft = wrapper.scrollLeft / scrollWidth;
-		visibleWidth = clientWidth / scrollWidth;
-
-		drawMinimap();
-	}
-
-	function handleWheel(e: WheelEvent) {
+	function handleWheel(event: WheelEvent) {
 		if (!wavesurfer || !isReady) return;
+		event.preventDefault();
 
-		e.preventDefault();
+		const factor = event.deltaY < 0 ? 1.2 : 0.8;
+		const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * factor));
+		if (next === zoomLevel) return;
 
-		// Zoom in/out based on wheel direction
-		const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8;
-		const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * zoomFactor));
+		zoomLevel = next;
+		wavesurfer.zoom(zoomLevel);
+	}
 
-		if (newZoom !== zoomLevel) {
-			zoomLevel = newZoom;
-			wavesurfer.zoom(zoomLevel);
+	function markerLeft(time: number): number {
+		if (audioStore.duration <= 0) return 0;
+		return Math.max(0, Math.min(100, (time / audioStore.duration) * 100));
+	}
+
+	function commitSelectedPointTime(event: Event) {
+		if (!selectedPoint) return;
+		const input = event.currentTarget as HTMLInputElement;
+		const parsed = parseTimecode(input.value);
+
+		if (parsed === null || !splitStore.update(selectedPoint.id, parsed)) {
+			input.value = formatTimecode(selectedPoint.time);
 		}
 	}
 
-	function drawMinimap() {
-		if (!minimapCanvas || !isReady) return;
-
-		const ctx = minimapCanvas.getContext('2d');
-		if (!ctx) return;
-
-		const width = minimapCanvas.width;
-		const height = minimapCanvas.height;
-
-		// Clear canvas
-		ctx.clearRect(0, 0, width, height);
-
-		// Draw background
-		ctx.fillStyle = '#1f2937';
-		ctx.fillRect(0, 0, width, height);
-
-		// Draw simplified waveform representation
-		ctx.fillStyle = '#4ade80';
-		const buffer = audioStore.buffer;
-		if (buffer) {
-			const data = buffer.getChannelData(0);
-			const step = Math.ceil(data.length / width);
-			const amp = height / 2;
-
-			for (let i = 0; i < width; i++) {
-				let min = 1.0;
-				let max = -1.0;
-				for (let j = 0; j < step; j++) {
-					const datum = data[i * step + j];
-					if (datum < min) min = datum;
-					if (datum > max) max = datum;
-				}
-				const y = (1 + min) * amp;
-				const h = Math.max(1, (max - min) * amp);
-				ctx.fillRect(i, y, 1, h);
-			}
-		}
-
-		// Draw regions on minimap
-		const regions = regionsStore.regions;
-		const duration = audioStore.duration;
-		if (duration > 0) {
-			regions.forEach((region) => {
-				const x = (region.start / duration) * width;
-				const w = ((region.end - region.start) / duration) * width;
-				ctx.fillStyle = region.color;
-				ctx.fillRect(x, 0, Math.max(1, w), height);
-			});
-		}
-
-		// Draw viewport rectangle
-		const viewX = scrollLeft * width;
-		const viewW = visibleWidth * width;
-
-		// Viewport border
-		ctx.strokeStyle = '#22d3ee';
-		ctx.lineWidth = 2;
-		ctx.strokeRect(viewX, 0, viewW, height);
-
-		// Viewport fill
-		ctx.fillStyle = 'rgba(34, 211, 238, 0.15)';
-		ctx.fillRect(viewX, 0, viewW, height);
-	}
-
-	function handleMinimapClick(e: MouseEvent) {
-		if (!wavesurfer || !minimapCanvas || !isReady) return;
-
-		const rect = minimapCanvas.getBoundingClientRect();
-		const x = (e.clientX - rect.left) / rect.width;
-
-		// Seek to clicked position
-		wavesurfer.seekTo(x);
-	}
-
-	// Redraw minimap when regions change
 	$effect(() => {
-		// Track regions to trigger redraw
-		regionsStore.regions;
-		drawMinimap();
-	});
-
-	// Load audio when file changes or wavesurfer becomes available
-	$effect(() => {
-		const url = audioStore.objectUrl;
+		const objectUrl = audioStore.objectUrl;
 		const ws = wavesurfer;
-		if (url && ws) {
-			isLoading = true;
-			isReady = false;
-			errorMessage = null;
-			zoomLevel = 1;
-			loopRegionId = null;
-			ws.load(url);
-		}
+		if (!objectUrl || !ws) return;
+
+		isLoading = true;
+		isReady = false;
+		errorMessage = null;
+		zoomLevel = 1;
+		splitStore.selectPoint(null);
+		ws.load(objectUrl);
 	});
 
-	// Keep loop mode in sync when toggle changes
-	$effect(() => {
-		audioStore.loopPlayback;
-		if (!audioStore.loopPlayback) {
-			loopRegionId = null;
-		}
-		applyLoopMode();
-	});
-
-	// Sync regions from store to WaveSurfer when store changes externally
-	$effect(() => {
-		const storeRegions = regionsStore.regions;
-		if (!regionsPlugin || !isReady) return;
-
-		const wsRegions = regionsPlugin.getRegions();
-
-		wsRegions.forEach((wsRegion) => {
-			if (!storeRegions.find((r) => r.id === wsRegion.id)) {
-				wsRegion.remove();
-			}
-		});
-
-		storeRegions.forEach((storeRegion) => {
-			const existing = wsRegions.find((r) => r.id === storeRegion.id);
-			if (existing) {
-				if (existing.start !== storeRegion.start || existing.end !== storeRegion.end) {
-					existing.setOptions({
-						start: storeRegion.start,
-						end: storeRegion.end
-					});
-				}
-				existing.setOptions({ color: storeRegion.color });
-			}
-		});
-	});
-
-	// Highlight selected region
-	$effect(() => {
-		const selectedId = regionsStore.selectedId;
-		if (!regionsPlugin || !isReady) return;
-
-		regionsPlugin.getRegions().forEach((region) => {
-			const storeRegion = regionsStore.regions.find((r) => r.id === region.id);
-			if (storeRegion) {
-				const isSelected = region.id === selectedId;
-				const baseColor = storeRegion.color;
-				const color = isSelected ? baseColor.replace('0.4', '0.6') : baseColor;
-				region.setOptions({ color });
-			}
-		});
-	});
-
-	onMount(() => {
-		initWaveSurfer();
-	});
+	onMount(initWaveSurfer);
 
 	onDestroy(() => {
 		wavesurfer?.destroy();
 	});
 
-	// Export methods for transport controls
 	export function play() {
-		loopRegionId = null;
-		applyLoopMode();
 		wavesurfer?.play();
 	}
 
@@ -352,101 +117,107 @@
 	}
 
 	export function stop() {
-		loopRegionId = null;
-		applyLoopMode();
 		wavesurfer?.stop();
-	}
-
-	export function playRegion(regionId: string) {
-		playRegionInternal(regionId);
+		audioStore.setCurrentTime(0);
 	}
 
 	export function seekTo(time: number) {
-		if (wavesurfer && audioStore.duration > 0) {
-			wavesurfer.seekTo(time / audioStore.duration);
-		}
+		if (!wavesurfer || audioStore.duration <= 0) return;
+		const safeTime = Math.max(0, Math.min(audioStore.duration, time));
+		wavesurfer.seekTo(safeTime / audioStore.duration);
+		audioStore.setCurrentTime(safeTime);
 	}
 
 	export function zoom(level: number) {
-		zoomLevel = level;
-		wavesurfer?.zoom(level);
+		zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
+		wavesurfer?.zoom(zoomLevel);
 	}
 </script>
 
-<div class="relative rounded-lg bg-gray-900 p-4">
+<div class="relative flex h-full min-h-[330px] flex-col bg-white">
 	{#if isLoading}
-		<div class="absolute inset-0 z-10 flex items-center justify-center bg-gray-900/80">
-			<div class="flex items-center gap-3">
-				<div
-					class="h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent"
-				></div>
-				<span class="text-gray-300">Loading audio...</span>
+		<div class="absolute inset-0 z-30 flex items-center justify-center bg-white/85">
+			<div class="flex items-center gap-3 text-sm text-gray-600">
+				<div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+				<span>Loading waveform…</span>
 			</div>
 		</div>
 	{/if}
 
-	<!-- Main waveform with wheel zoom -->
-	<div
-		bind:this={container}
-		class="waveform-container w-full"
-		onwheel={handleWheel}
-		role="application"
-		aria-label="Audio waveform - use mouse wheel to zoom"
-	></div>
+	<div class="relative flex-1 overflow-hidden">
+		<div
+			bind:this={container}
+			class="waveform-container h-full min-h-[230px] w-full overflow-x-auto"
+			onwheel={handleWheel}
+			role="application"
+			aria-label="MP3 waveform. Use the mouse wheel to zoom and click to seek."
+		></div>
 
-	{#if isReady}
-		<!-- Time display and zoom info -->
-		<div class="mt-2 flex items-center justify-between text-sm text-gray-400">
-			<span>{formatTime(audioStore.currentTime)}</span>
-			<span class="text-xs text-gray-500">
-				{zoomLevel > 1 ? `${Math.round(zoomLevel)}x zoom` : 'Scroll to zoom'}
-			</span>
-			<span>{formatTime(audioStore.duration)}</span>
-		</div>
-
-		<!-- Minimap / Overview HUD -->
-		<div class="mt-3">
-			<div class="mb-1 flex items-center justify-between">
-				<span class="text-xs text-gray-500">Overview</span>
-				{#if zoomLevel > 1}
+		{#if isReady && audioStore.duration > 0}
+			<div class="pointer-events-none absolute inset-0 z-20">
+				{#each splitStore.points as point (point.id)}
 					<button
-						class="text-xs text-cyan-400 hover:text-cyan-300"
-						onclick={() => zoom(1)}
+						class={`pointer-events-auto absolute top-0 h-full w-5 -translate-x-1/2 cursor-pointer border-0 bg-transparent p-0 ${
+							point.id === splitStore.selectedPointId ? 'z-20' : 'z-10'
+						}`}
+						style={`left: ${markerLeft(point.time)}%`}
+						onclick={(event) => {
+							event.stopPropagation();
+							splitStore.selectPoint(point.id);
+						}}
+						title={`Split point ${formatTimecode(point.time)}`}
+						aria-label={`Select split point at ${formatTimecode(point.time)}`}
 					>
-						Reset zoom
+						<span
+							class={`absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 ${
+								point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
+							}`}
+						></span>
+						<span
+							class={`absolute left-1/2 top-1 -translate-x-1/2 rounded px-1 py-0.5 text-[10px] font-semibold text-white ${
+								point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
+							}`}
+						>
+							{splitStore.points.findIndex((candidate) => candidate.id === point.id) + 1}
+						</span>
 					</button>
-				{/if}
+				{/each}
 			</div>
+		{/if}
+	</div>
+
+	<div class="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 text-xs text-gray-500">
+		<span class="font-mono">{formatTimecode(audioStore.currentTime)}</span>
+		<div class="flex items-center gap-3">
+			<span>{zoomLevel > 1 ? `${Math.round(zoomLevel)}× zoom` : 'Scroll to zoom'}</span>
+			{#if zoomLevel > 1}
+				<button class="text-blue-700 hover:underline" onclick={() => zoom(1)}>Reset zoom</button>
+			{/if}
+		</div>
+		<span class="font-mono">{formatTimecode(audioStore.duration)}</span>
+	</div>
+
+	{#if selectedPoint}
+		<div class="mt-2 flex flex-wrap items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
+			<span class="font-medium text-blue-900">Selected split point</span>
+			<input
+				class="w-36 rounded border border-blue-300 bg-white px-2 py-1 font-mono"
+				value={formatTimecode(selectedPoint.time)}
+				onchange={commitSelectedPointTime}
+				aria-label="Selected split point time"
+			/>
 			<button
-				class="relative block h-10 w-full cursor-pointer overflow-hidden rounded border border-gray-700 bg-gray-800"
-				onclick={handleMinimapClick}
-				aria-label="Click to seek in audio"
+				class="rounded border border-red-300 bg-white px-2 py-1 text-red-700 hover:bg-red-50"
+				onclick={() => splitStore.remove(selectedPoint.id)}
 			>
-				<canvas
-					bind:this={minimapCanvas}
-					width="400"
-					height="40"
-					class="h-full w-full"
-				></canvas>
+				Delete split point
 			</button>
 		</div>
-	{:else if errorMessage}
-		<div class="flex h-32 flex-col items-center justify-center gap-2">
-			<svg class="h-8 w-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-			</svg>
-			<span class="text-red-400">{errorMessage}</span>
-			<span class="text-xs text-gray-500">Try uploading a different audio file</span>
-		</div>
-	{:else if !audioStore.file}
-		<div class="flex h-32 items-center justify-center text-gray-500">
-			Upload an audio file to see the waveform
+	{/if}
+
+	{#if errorMessage}
+		<div class="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+			{errorMessage}
 		</div>
 	{/if}
 </div>
-
-<style>
-	.waveform-container :global(wave) {
-		cursor: crosshair !important;
-	}
-</style>
