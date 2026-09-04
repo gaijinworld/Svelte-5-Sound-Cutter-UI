@@ -5,6 +5,7 @@
 	import SplitPointsTable from '$lib/components/SplitPointsTable.svelte';
 	import WaveformDisplay from '$lib/components/WaveformDisplay.svelte';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
+	import { splitStore } from '$lib/stores/splitStore.svelte';
 
 	let waveformDisplay: WaveformDisplay;
 
@@ -23,6 +24,45 @@
 	function handleSeek(time: number) {
 		waveformDisplay?.seekTo(time);
 	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		const target = event.target;
+		if (
+			target instanceof HTMLInputElement ||
+			target instanceof HTMLTextAreaElement ||
+			(target instanceof HTMLElement && target.isContentEditable)
+		) {
+			return;
+		}
+
+		if (!audioStore.file || event.metaKey || event.ctrlKey || event.altKey) return;
+
+		switch (event.code) {
+			case 'Space':
+				event.preventDefault();
+				audioStore.isPlaying ? handlePause() : handlePlay();
+				break;
+			case 'KeyS':
+				event.preventDefault();
+				splitStore.add(audioStore.currentTime);
+				break;
+			case 'Delete':
+			case 'Backspace':
+				if (splitStore.selectedPointId) {
+					event.preventDefault();
+					splitStore.remove(splitStore.selectedPointId);
+				}
+				break;
+			case 'ArrowLeft':
+				event.preventDefault();
+				handleSeek(audioStore.currentTime - (event.shiftKey ? 1 : 0.1));
+				break;
+			case 'ArrowRight':
+				event.preventDefault();
+				handleSeek(audioStore.currentTime + (event.shiftKey ? 1 : 0.1));
+				break;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -32,6 +72,8 @@
 		content="Split MP3 files locally in your browser using waveform split points."
 	/>
 </svelte:head>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="min-h-screen bg-[#ececec] text-gray-900">
 	<header class="flex h-16 items-center justify-between border-b border-gray-300 bg-white px-4 shadow-sm">
