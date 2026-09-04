@@ -1,3 +1,17 @@
+export interface SplitPoint {
+	id: string;
+	time: number;
+}
+
+export interface SplitSegment {
+	id: string;
+	index: number;
+	start: number;
+	end: number;
+	duration: number;
+	enabled: boolean;
+}
+
 export interface Region {
 	id: string;
 	name: string;
