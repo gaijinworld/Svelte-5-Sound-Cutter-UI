@@ -1,4 +1,5 @@
-import type { SplitPoint, SplitSegment } from '$lib/types';
+import type { SplitPoint } from '$lib/types';
+import { deriveSegments } from '$lib/utils/splits';
 import { audioStore } from './audioStore.svelte';
 
 export const SPLIT_EPSILON_SECONDS = 0.005;
@@ -64,29 +65,8 @@ function createSplitStore() {
 		selectedPointId = null;
 	}
 
-	function getSegments(): SplitSegment[] {
-		const duration = audioStore.duration;
-		if (duration <= 0) return [];
-
-		const boundaries = [
-			{ id: 'start', time: 0 },
-			...[...points].sort((a, b) => a.time - b.time),
-			{ id: 'end', time: duration }
-		];
-
-		return boundaries.slice(0, -1).map((boundary, index) => {
-			const next = boundaries[index + 1];
-			const id = `${boundary.id}:${next.id}`;
-
-			return {
-				id,
-				index,
-				start: boundary.time,
-				end: next.time,
-				duration: next.time - boundary.time,
-				enabled: enabled[id] ?? true
-			};
-		});
+	function getSegments() {
+		return deriveSegments(points, audioStore.duration, enabled);
 	}
 
 	function setEnabled(id: string, value: boolean) {
