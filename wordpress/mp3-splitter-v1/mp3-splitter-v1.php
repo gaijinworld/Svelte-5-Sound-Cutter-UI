@@ -33,6 +33,18 @@ final class MP3S_Plugin {
 
     private function __construct() {
         add_shortcode(MP3S_SHORTCODE, [$this, 'render_shortcode']);
+        add_filter('document_title_parts', [$this, 'filter_document_title']);
+    }
+
+    /**
+     * Versioned document title on the app page, matching the SPA's own
+     * <title> so the tab shows the version even before hydration.
+     */
+    public function filter_document_title(array $title): array {
+        if (is_page(MP3S_PAGE_SLUG)) {
+            $title['title'] = 'MP3 Splitter App v' . MP3S_PLUGIN_VERSION . ' Live';
+        }
+        return $title;
     }
 
     /**
@@ -98,7 +110,10 @@ final class MP3S_Plugin {
         $html = (string) file_get_contents($index_path);
 
         if (preg_match('/<head[^>]*>(.*)<\/head>\s*<body[^>]*>(.*)<\/body>/is', $html, $m)) {
-            return $m[1] . "\n" . $m[2];
+            // Strip tags that belong in a document <head> only — they are
+            // invalid/duplicated when inlined into a WP page body.
+            $head = preg_replace('/<(title|meta)\b[^>]*>(<\/title>)?/is', '', $m[1]);
+            return $head . "\n" . $m[2];
         }
         return $html;
     }
