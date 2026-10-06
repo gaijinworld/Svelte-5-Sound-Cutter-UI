@@ -342,7 +342,7 @@
 
 	{#snippet ruler(position: 'top' | 'bottom')}
 		<div
-			class={`relative h-7 w-full shrink-0 overflow-hidden border-gray-200 bg-gray-50 ${
+			class={`relative h-7 w-full shrink-0 overflow-hidden border-slate-200 bg-slate-100/80 ${
 				position === 'top' ? 'border-b' : 'border-t'
 			}`}
 			onwheel={handleWheel}
@@ -350,11 +350,11 @@
 		>
 			{#each rulerTicks as tick (tick.t)}
 				<span
-					class={`absolute w-px bg-gray-400 ${position === 'top' ? 'bottom-0 h-1.5' : 'top-0 h-1.5'}`}
+					class={`absolute w-px bg-slate-400 ${position === 'top' ? 'bottom-0 h-1.5' : 'top-0 h-1.5'}`}
 					style={`left: ${tick.x}px`}
 				></span>
 				<span
-					class={`absolute overflow-hidden whitespace-nowrap text-center font-mono text-[11px] font-medium text-gray-600 ${
+					class={`absolute overflow-hidden whitespace-nowrap text-center font-mono text-[11px] font-semibold text-slate-600 ${
 						position === 'top' ? 'top-[3px]' : 'top-[9px]'
 					}`}
 					style={`left: ${tick.labelLeft}px; width: ${RULER_LABEL_W}px`}
@@ -370,7 +370,7 @@
 			{@render ruler('top')}
 		{/if}
 
-		<div class="relative flex min-h-0 flex-1 flex-col">
+		<div class="relative flex min-h-0 flex-1 flex-col rounded-lg bg-gradient-to-b from-slate-50/80 to-white ring-1 ring-slate-200/60">
 			<div
 				bind:this={container}
 				id="mp3s-waveform-scroll"
@@ -423,7 +423,7 @@
 
 	{#if scrollable}
 		<div
-			class="relative mt-1.5 h-2.5 shrink-0 touch-none select-none rounded-full bg-gray-200"
+			class="relative mt-1.5 h-2.5 shrink-0 touch-none select-none rounded-full bg-gray-200 shadow-inner"
 			role="scrollbar"
 			aria-orientation="horizontal"
 			aria-label="Scroll waveform horizontally"
@@ -442,7 +442,7 @@
 		</div>
 	{/if}
 
-	<div class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-gray-200 pt-2 text-xs text-gray-500">
+	<div class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-gray-500">
 		<span class="font-mono">{formatTimecode(audioStore.currentTime)}</span>
 		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
 			<label class="flex cursor-pointer items-center gap-1 select-none">
@@ -477,8 +477,8 @@
 	</div>
 
 	{#if selectedPoint}
-		<div class="mt-2 flex flex-wrap items-center gap-2 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs">
-			<span class="font-medium text-blue-900">Selected split point</span>
+		<div class="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs shadow-sm">
+			<span class="font-semibold text-blue-900">Selected split point</span>
 			<input
 				class="w-36 rounded border border-blue-300 bg-white px-2 py-1 font-mono"
 				value={formatTimecode(selectedPoint.time)}
