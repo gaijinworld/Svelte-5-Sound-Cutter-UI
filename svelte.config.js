@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,10 +8,14 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-		adapter: adapter()
+		// SPA fallback: a single index.html shell that the WordPress plugin
+		// embeds via shortcode. See wordpress/mp3-splitter-v1/.
+		adapter: adapter({ fallback: 'index.html' }),
+		paths: {
+			// Deploy builds set SVELTEKIT_PATHS_BASE to the plugin asset URL so
+			// module scripts/imports resolve under wp-content/plugins/...
+			base: process.env.SVELTEKIT_PATHS_BASE ?? ''
+		}
 	}
 };
 
