@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SplitPoint } from '$lib/types';
-import { deriveSegments } from './splits';
+import { deriveSegments, findAdjacentPoint } from './splits';
 
 describe('deriveSegments', () => {
 	it('derives contiguous output segments from ordered split points', () => {
@@ -37,5 +37,45 @@ describe('deriveSegments', () => {
 	it('returns no segments for invalid duration', () => {
 		expect(deriveSegments([], 0)).toEqual([]);
 		expect(deriveSegments([], Number.NaN)).toEqual([]);
+	});
+});
+
+describe('findAdjacentPoint', () => {
+	const points: SplitPoint[] = [
+		{ id: 'a', time: 4 },
+		{ id: 'b', time: 8 },
+		{ id: 'c', time: 12 }
+	];
+
+	it('finds the previous point strictly before the playhead', () => {
+		expect(findAdjacentPoint(points, 10, -1)?.id).toBe('b');
+		expect(findAdjacentPoint(points, 8.1, -1)?.id).toBe('b');
+		expect(findAdjacentPoint(points, 4, -1)).toBeNull();
+		expect(findAdjacentPoint(points, 0, -1)).toBeNull();
+	});
+
+	it('finds the next point strictly after the playhead', () => {
+		expect(findAdjacentPoint(points, 10, 1)?.id).toBe('c');
+		expect(findAdjacentPoint(points, 0, 1)?.id).toBe('a');
+		expect(findAdjacentPoint(points, 12, 1)).toBeNull();
+		expect(findAdjacentPoint(points, 20, 1)).toBeNull();
+	});
+
+	it('skips the point the playhead sits on (epsilon tolerance)', () => {
+		expect(findAdjacentPoint(points, 8, -1)?.id).toBe('a');
+		expect(findAdjacentPoint(points, 8, 1)?.id).toBe('c');
+		expect(findAdjacentPoint(points, 8.003, -1)?.id).toBe('a');
+	});
+
+	it('returns null for empty lists and unsorted input still works', () => {
+		expect(findAdjacentPoint([], 5, -1)).toBeNull();
+		expect(findAdjacentPoint([], 5, 1)).toBeNull();
+		const unsorted: SplitPoint[] = [
+			{ id: 'c', time: 12 },
+			{ id: 'a', time: 4 },
+			{ id: 'b', time: 8 }
+		];
+		expect(findAdjacentPoint(unsorted, 10, -1)?.id).toBe('b');
+		expect(findAdjacentPoint(unsorted, 6, 1)?.id).toBe('b');
 	});
 });

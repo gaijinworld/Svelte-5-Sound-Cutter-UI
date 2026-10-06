@@ -1,8 +1,8 @@
 import type { SplitPoint } from '$lib/types';
-import { deriveSegments } from '$lib/utils/splits';
+import { deriveSegments, SPLIT_EPSILON_SECONDS } from '$lib/utils/splits';
 import { audioStore } from './audioStore.svelte';
 
-export const SPLIT_EPSILON_SECONDS = 0.005;
+export { SPLIT_EPSILON_SECONDS };
 
 function createSplitStore() {
 	let points = $state<SplitPoint[]>([]);
