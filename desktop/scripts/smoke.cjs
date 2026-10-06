@@ -55,6 +55,15 @@ const { spawnSync } = require('node:child_process');
 		const page = await desktop.firstWindow();
 		await page.waitForFunction(() => !!window.MP3S_DESKTOP_ENV?.isDesktop);
 
+		// The app must actually render — the bridge is injected by the preload
+		// even when the SvelteKit router fails (e.g. /index.html isn't a route).
+		await page.waitForSelector('text=Open an audio file', { timeout: 10000 });
+		const bodyText = await page.evaluate(() => document.body.innerText);
+		assert.ok(
+			!/Not found|404/i.test(bodyText.slice(0, 200)),
+			`router error page rendered: ${bodyText.slice(0, 120)}`
+		);
+
 		// Bridge surface + env.
 		const env = await page.evaluate(() => ({
 			isDesktop: window.MP3S_DESKTOP_ENV.isDesktop,

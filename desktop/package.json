@@ -7,9 +7,10 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"sync-version": "node ./scripts/sync-version.cjs",
-		"build:ts": "tsup src/main.ts src/preload.ts --format cjs --target node20 --out-dir dist --external electron --clean",
+		"build:ts": "tsup src/main.ts src/preload.ts --format cjs --target node20 --out-dir dist --external electron",
+		"clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
 		"copy:web": "node ./scripts/copy-renderer.cjs",
-		"build": "pnpm sync-version && pnpm typecheck && pnpm build:ts && pnpm copy:web",
+		"build": "pnpm sync-version && pnpm typecheck && pnpm clean && pnpm build:ts && pnpm copy:web",
 		"dev": "pnpm build:ts && electron dist/main.js",
 		"test:smoke": "node scripts/smoke.cjs",
 		"package:win": "pnpm build && electron-builder --win nsis --publish never",
