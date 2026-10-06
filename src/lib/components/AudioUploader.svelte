@@ -61,7 +61,7 @@
 {#if compact}
 	<div class="flex min-w-0 items-center gap-2">
 		{#if audioStore.file}
-			<div class="hidden max-w-72 truncate text-xs text-gray-500 sm:block" title={audioStore.file.name}>
+			<div class="mp3s-hide mp3s-show-sm max-w-72 truncate text-xs text-gray-500" title={audioStore.file.name}>
 				{audioStore.file.name}
 			</div>
 		{/if}
