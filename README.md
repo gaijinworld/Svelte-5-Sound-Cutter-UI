@@ -1,18 +1,19 @@
-# Gaijin World MP3 Splitter
+# Gaijin World Audio Splitter
 
-Browser-local MP3 splitter built with SvelteKit (Svelte 5), WaveSurfer.js, and FFmpeg.wasm. Load an MP3, drop ordered split points on the waveform, and export the contiguous segments — losslessly (stream copy) or precisely (re-encode) — as individual files or a ZIP bundle. No server upload; all processing happens in the browser.
+Browser-local audio splitter built with SvelteKit (Svelte 5), WaveSurfer.js, and FFmpeg.wasm. Load an audio file, drop ordered split points on the waveform, and export the contiguous segments — losslessly (stream copy) or precisely (re-encode to the same format) — as individual files or a ZIP bundle. No server upload; all processing happens in the browser.
 
-![MP3 Splitter app screenshot](./preview.png)
+![Audio Splitter app screenshot](./preview.png
 
 ## Features
-- Open an MP3 file and see its waveform instantly
+- Open an audio file and see its waveform instantly — MP3, WAV, M4A, AAC, OGG/Opus, FLAC, and WMA (WMA decodes via ffmpeg.wasm for the preview)
 - Add ordered split points (button, `S` key, or click); contiguous segments are derived automatically
 - Select/edit/delete points with millisecond `H:MM:SS.mmm` precision
 - Keyboard workflow: `Space` play/pause, `S` add point, `Delete`/`Backspace` remove, `←`/`→` seek, `Shift+←`/`→` coarse seek
 - Enable/disable individual segments before export
-- Two cut modes: **Fast/Lossless** (`-c:a copy`, no re-encode) and **Precise** (`libmp3lame -q:a 2` re-encode for frame-exact boundaries)
+- Two cut modes: **Fast/Lossless** (`-c:a copy`, no re-encode) and **Precise** (re-encode to the same codec for tight boundaries). Exports keep the input format — WAV→WAV, M4A→M4A, OGG→OGG…
 - Sequential batch export with per-segment progress and cancellation
-- Download parts individually (`*_part_001.mp3` …) or as a ZIP
+- Download parts individually (`*_part_001.<ext>` …) or as a ZIP
+- Resizable workspace panes, toggleable top/bottom timestamp rulers, cursor-anchored wheel zoom + 25–500% zoom dropdown, synced horizontal scrollbar
 - Responsive layout; 250 MB+ input size warning
 - Visible version badge (`vYYYY.MM.DD.NN`) in the header and page title
 
@@ -39,11 +40,11 @@ pnpm dev
 ```
 
 ## Usage
-1. Open an MP3 file.
+1. Open an audio file.
 2. Add split points on the waveform or via the playback bar (`S`, or Add Split Point).
 3. Edit point times to millisecond precision in the segment table; toggle segments on/off.
 4. Choose Fast/Lossless or Precise mode, then Start Splitting.
-5. Download each MP3 part individually or use Download All ZIP.
+5. Download each part individually or use Download All ZIP. Parts keep the source format.
 
 ## Version and Releases
 - Version format: `YYYY.MM.DD.NN` (date + daily increment), e.g. `2026.10.06.01`.
@@ -58,9 +59,16 @@ The app ships as an SPA (`@sveltejs/adapter-static`, `index.html` fallback) embe
 pnpm deploy:localwp
 ```
 
-This builds with `SVELTEKIT_PATHS_BASE=/wp-content/plugins/mp3-splitter-v1/assets/dist` and copies the plugin (`mp3-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/mp3-splitter/` page containing the `[mp3_splitter]` shortcode; the plugin injects `window.MP3SPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
+This builds with `SVELTEKIT_PATHS_BASE=/mp3-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`mp3-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/mp3-splitter/` page containing the `[mp3_splitter]` shortcode; the plugin injects `window.MP3SPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
 
 ## Recent Changes
+- **2026-10-06** — feat: multi-format audio input (WAV/M4A/AAC/OGG/Opus/FLAC/WMA) + match-input export; renamed to Audio Splitter (#34)
+- **2026-10-06** — feat: cursor-anchored wheel zoom + 25–500% dropdown (#33)
+- **2026-10-06** — fix: readable ruler timestamps (#32)
+- **2026-10-06** — fix: collision-free hide/show utils for WP themes (#28)
+- **2026-10-06** — fix(waveform): markers track zoom/scroll + synced scrollbar (#27)
+- **2026-10-06** — feat: toggleable timestamp rulers (#26), resizable panes (#25), clickable empty state (#24)
+- **2026-10-06** — `fdca18f`-era fixes: waveform fills viewer height (#18), Autoptimize SPA boot + paths.base/assets split (#17), versioned WP title (#16), LocalWP deploy packaging + v2026.10.06.01 (#15)
 - **2026-10-06** — `e607a0c` chore: remove legacy Tone/Region/Voice modules and tone dependency (#14)
 - **2026-10-06** — `34766ad` Phase 2: define Electron desktop target and native FFmpeg architecture (#9)
 - **2026-10-06** — `46f42b7` Phase 1.1: add Fast/Lossless and Precise MP3 cut modes (#8)

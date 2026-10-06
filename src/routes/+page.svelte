@@ -100,10 +100,10 @@
 </script>
 
 <svelte:head>
-	<title>MP3 Splitter App v{VISIBLE_VERSION} Live</title>
+	<title>Audio Splitter App v{VISIBLE_VERSION} Live</title>
 	<meta
 		name="description"
-		content="Split MP3 files locally in your browser using waveform split points."
+		content="Split audio files locally in your browser using waveform split points."
 	/>
 </svelte:head>
 
@@ -115,7 +115,7 @@
 			<div class="text-xl" aria-hidden="true">🎵</div>
 			<div class="min-w-0">
 				<h1 class="truncate text-sm font-semibold leading-tight sm:text-base">
-					Gaijin World MP3 Splitter<span
+					Gaijin World Audio Splitter<span
 						class="ml-2 inline-block rounded bg-gray-100 px-1.5 py-0.5 align-middle font-mono text-[10px] font-normal text-gray-500"
 						>v{VISIBLE_VERSION}</span
 					>
@@ -182,7 +182,7 @@
 			<div class="w-full">
 				<AudioUploader />
 				<div class="mt-6 text-center text-sm text-gray-500">
-					Open MP3 → seek → add split points → review segments → start splitting.
+					Open audio → seek → add split points → review segments → start splitting.
 				</div>
 			</div>
 		</main>

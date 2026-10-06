@@ -1,16 +1,26 @@
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import { loadFfmpeg, resetFfmpeg } from '$lib/audio/ffmpegClient';
 import type { SplitSegment } from '$lib/types';
+import {
+	detectAudioFormat,
+	fastEncodingArgs,
+	outputExtension,
+	outputMime,
+	preciseEncodingArgs,
+	type AudioFormat
+} from '$lib/utils/audioFormat';
 import type { MediaSplitEngine, SplitOptions, SplitResult } from './types';
 
 export class BrowserFfmpegEngine implements MediaSplitEngine {
 	private ffmpeg: FFmpeg | null = null;
 	private inputName: string | null = null;
+	private format: AudioFormat = 'mp3';
 
 	async prepare(file: File): Promise<void> {
 		await this.dispose();
 		this.ffmpeg = await loadFfmpeg();
-		this.inputName = `source_${Date.now()}.mp3`;
+		this.format = detectAudioFormat(file) ?? 'mp3';
+		this.inputName = `source_${Date.now()}.${outputExtension(this.format)}`;
 
 		const inputData = new Uint8Array(await file.arrayBuffer());
 		await this.ffmpeg.writeFile(this.inputName, inputData);
@@ -47,14 +57,12 @@ export class BrowserFfmpegEngine implements MediaSplitEngine {
 		];
 
 		const encoding =
-			mode === 'precise'
-				? ['-c:a', 'libmp3lame', '-q:a', '2']
-				: ['-c:a', 'copy', '-avoid_negative_ts', 'make_zero'];
+			mode === 'precise' ? preciseEncodingArgs(this.format) : fastEncodingArgs(this.format);
 
 		await this.ffmpeg.exec([...common, ...encoding, '-y', outputName]);
 
 		const data = (await this.ffmpeg.readFile(outputName)) as Uint8Array;
-		const blob = new Blob([Uint8Array.from(data)], { type: 'audio/mpeg' });
+		const blob = new Blob([Uint8Array.from(data)], { type: outputMime(this.format) });
 
 		try {
 			await this.ffmpeg.deleteFile(outputName);

@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: MP3 Splitter App (Production V1)
+ * Plugin Name: Audio Splitter App (Production V1)
  * Plugin URI: https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI
- * Description: Browser-local MP3 splitter; ordered split points, lossless/precise FFmpeg.wasm export, batch ZIP download.
+ * Description: Browser-local audio splitter; ordered split points, lossless/precise FFmpeg.wasm export, batch ZIP download.
  * Version: 2026.10.06.01
  * Author: GaijinWorld
  * Author URI: https://github.com/gaijinworld
@@ -18,7 +18,7 @@ define('MP3S_PLUGIN_FILE', __FILE__);
 define('MP3S_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('MP3S_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('MP3S_PAGE_SLUG', 'mp3-splitter');
-define('MP3S_PAGE_TITLE', 'MP3 Splitter');
+define('MP3S_PAGE_TITLE', 'Audio Splitter');
 define('MP3S_SHORTCODE', 'mp3_splitter');
 
 final class MP3S_Plugin {
@@ -43,7 +43,7 @@ final class MP3S_Plugin {
      */
     public function filter_document_title(array $title): array {
         if (is_page(MP3S_PAGE_SLUG)) {
-            $title['title'] = 'MP3 Splitter App v' . MP3S_PLUGIN_VERSION . ' Live';
+            $title['title'] = 'Audio Splitter App v' . MP3S_PLUGIN_VERSION . ' Live';
         }
         return $title;
     }
@@ -88,7 +88,7 @@ final class MP3S_Plugin {
     public function render_shortcode(): string {
         $markup = $this->get_app_markup();
         if ($markup === null) {
-            return '<div class="mp3s-build-error" role="alert">MP3 Splitter is temporarily unavailable because its application assets are missing. Deploy the production frontend build or contact the site administrator.</div>';
+            return '<div class="mp3s-build-error" role="alert">Audio Splitter is temporarily unavailable because its application assets are missing. Deploy the production frontend build or contact the site administrator.</div>';
         }
         // <!--noptimize--> tells Autoptimize to leave this whole block alone.
         return "<!--noptimize-->\n" . $this->get_runtime_config_tag() . "\n" . $markup . "\n<!--/noptimize-->";

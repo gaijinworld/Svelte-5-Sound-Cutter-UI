@@ -60,4 +60,4 @@ rmSync(distDest, { recursive: true, force: true });
 mkdirSync(distDest, { recursive: true });
 cpSync(buildDir, distDest, { recursive: true });
 
-console.log('Done. Activate "MP3 Splitter App (Production V1)" in wp-admin (or via a bootstrap script) — the /mp3-splitter/ page is created on activation.');
+console.log('Done. Activate "Audio Splitter App (Production V1)" in wp-admin (or via a bootstrap script) — the /mp3-splitter/ page is created on activation.');
