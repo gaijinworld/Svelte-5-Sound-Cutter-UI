@@ -163,28 +163,38 @@
 
 	// Timestamp rulers — independent top/bottom TimelinePlugin instances,
 	// recreated whenever the toggles or the wavesurfer instance change.
+	// Label font = height/2 internally; style overrides land on the ruler
+	// container (inside the wavesurfer shadow root), so spacing/size/colour
+	// must all come through plugin options.
+	const rulerOptions = (insertPosition: 'beforebegin' | 'afterend') => ({
+		insertPosition,
+		height: 30,
+		formatTimeCallback: formatTimecode,
+		primaryLabelSpacing: 96,
+		secondaryLabelSpacing: 48,
+		secondaryLabelOpacity: 0.35,
+		style: {
+			fontSize: '12px',
+			fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+			fontWeight: '500',
+			color: '#1f2937',
+			backgroundColor: '#f8fafc',
+			paddingTop: '3px',
+			paddingBottom: '2px',
+			...(insertPosition === 'beforebegin'
+				? { borderBottom: '1px solid #e5e7eb' }
+				: { borderTop: '1px solid #e5e7eb' })
+		}
+	});
+
 	$effect(() => {
 		const ws = wavesurfer;
 		if (!ws) return;
 		const top = showTopRuler
-			? ws.registerPlugin(
-					TimelinePlugin.create({
-						insertPosition: 'beforebegin',
-						height: 20,
-						formatTimeCallback: formatTimecode,
-						style: { fontSize: '10px', color: '#4b5563' }
-					})
-				)
+			? ws.registerPlugin(TimelinePlugin.create(rulerOptions('beforebegin')))
 			: null;
 		const bottom = showBottomRuler
-			? ws.registerPlugin(
-					TimelinePlugin.create({
-						insertPosition: 'afterend',
-						height: 20,
-						formatTimeCallback: formatTimecode,
-						style: { fontSize: '10px', color: '#4b5563' }
-					})
-				)
+			? ws.registerPlugin(TimelinePlugin.create(rulerOptions('afterend')))
 			: null;
 		return () => {
 			top?.destroy();
