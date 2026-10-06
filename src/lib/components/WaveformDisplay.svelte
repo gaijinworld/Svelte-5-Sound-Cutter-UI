@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
-	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.js';
 	import { decodeToWavBlob } from '$lib/audio/ffmpegDecode';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
@@ -218,45 +217,42 @@
 		}
 	}
 
-	// Timestamp rulers — independent top/bottom TimelinePlugin instances,
-	// recreated whenever the toggles or the wavesurfer instance change.
-	// Label font = height/2 internally; style overrides land on the ruler
-	// container (inside the wavesurfer shadow root), so spacing/size/colour
-	// must all come through plugin options.
-	const rulerOptions = (insertPosition: 'beforebegin' | 'afterend') => ({
-		insertPosition,
-		height: 30,
-		formatTimeCallback: formatTimecode,
-		primaryLabelSpacing: 96,
-		secondaryLabelSpacing: 48,
-		secondaryLabelOpacity: 0.35,
-		style: {
-			fontSize: '12px',
-			fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-			fontWeight: '500',
-			color: '#1f2937',
-			backgroundColor: '#f8fafc',
-			paddingTop: '3px',
-			paddingBottom: '2px',
-			...(insertPosition === 'beforebegin'
-				? { borderBottom: '1px solid #e5e7eb' }
-				: { borderTop: '1px solid #e5e7eb' })
-		}
-	});
+	// Timestamp rulers — custom strips rendered as regular DOM siblings of
+	// the waveform (NOT inside the wavesurfer shadow root, which clipped and
+	// overlaid the old TimelinePlugin rulers). Ticks are positioned in
+	// scroll-space like the markers, so they track zoom and pan exactly.
+	const RULER_LABEL_W = 76;
+	const RULER_MIN_TICK_PX = 96;
+	const RULER_INTERVALS_S = [
+		0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1200,
+		1800, 3600
+	];
 
-	$effect(() => {
-		const ws = wavesurfer;
-		if (!ws) return;
-		const top = showTopRuler
-			? ws.registerPlugin(TimelinePlugin.create(rulerOptions('beforebegin')))
-			: null;
-		const bottom = showBottomRuler
-			? ws.registerPlugin(TimelinePlugin.create(rulerOptions('afterend')))
-			: null;
-		return () => {
-			top?.destroy();
-			bottom?.destroy();
-		};
+	const rulerTicks = $derived.by(() => {
+		if (!isReady || audioStore.duration <= 0 || contentWidth <= 0 || viewportWidth <= 0) {
+			return [];
+		}
+		const pxPerSec = contentWidth / audioStore.duration;
+		const interval =
+			RULER_INTERVALS_S.find((s) => s * pxPerSec >= RULER_MIN_TICK_PX) ??
+			RULER_INTERVALS_S[RULER_INTERVALS_S.length - 1];
+		const firstT = Math.max(0, scrollLeft / pxPerSec);
+		const lastT = Math.min(audioStore.duration, (scrollLeft + viewportWidth) / pxPerSec);
+		const ticks: { t: number; x: number; labelLeft: number; label: string }[] = [];
+		for (let t = Math.floor(firstT / interval) * interval; t <= lastT + 1e-9; t += interval) {
+			const snapped = Math.round(t * 1e6) / 1e6;
+			const x = snapped * pxPerSec - scrollLeft;
+			ticks.push({
+				t: snapped,
+				x,
+				labelLeft: Math.max(
+					2,
+					Math.min(viewportWidth - RULER_LABEL_W - 2, x - RULER_LABEL_W / 2)
+				),
+				label: formatTimecode(snapped)
+			});
+		}
+		return ticks;
 	});
 
 	async function previewViaWasm(file: File) {
@@ -344,18 +340,48 @@
 		</div>
 	{/if}
 
-	<div class="relative flex flex-1 flex-col overflow-hidden">
+	{#snippet ruler(position: 'top' | 'bottom')}
 		<div
-			bind:this={container}
-			id="mp3s-waveform-scroll"
-			class="waveform-container w-full min-h-[230px] flex-1 overflow-x-auto"
+			class={`relative h-7 w-full shrink-0 overflow-hidden border-gray-200 bg-gray-50 ${
+				position === 'top' ? 'border-b' : 'border-t'
+			}`}
 			onwheel={handleWheel}
-			role="application"
-			aria-label="Audio waveform. Use the mouse wheel to zoom and click to seek."
-		></div>
+			role="presentation"
+		>
+			{#each rulerTicks as tick (tick.t)}
+				<span
+					class={`absolute w-px bg-gray-400 ${position === 'top' ? 'bottom-0 h-1.5' : 'top-0 h-1.5'}`}
+					style={`left: ${tick.x}px`}
+				></span>
+				<span
+					class={`absolute overflow-hidden whitespace-nowrap text-center font-mono text-[11px] font-medium text-gray-600 ${
+						position === 'top' ? 'top-[3px]' : 'top-[9px]'
+					}`}
+					style={`left: ${tick.labelLeft}px; width: ${RULER_LABEL_W}px`}
+				>
+					{tick.label}
+				</span>
+			{/each}
+		</div>
+	{/snippet}
 
-		{#if isReady && audioStore.duration > 0}
-			<div class="pointer-events-none absolute inset-0 z-20">
+	<div class="relative flex flex-1 flex-col overflow-hidden">
+		{#if showTopRuler && isReady && audioStore.duration > 0}
+			{@render ruler('top')}
+		{/if}
+
+		<div class="relative flex min-h-0 flex-1 flex-col">
+			<div
+				bind:this={container}
+				id="mp3s-waveform-scroll"
+				class="waveform-container w-full min-h-[230px] flex-1 overflow-x-auto"
+				onwheel={handleWheel}
+				role="application"
+				aria-label="Audio waveform. Use the mouse wheel to zoom and click to seek."
+			></div>
+
+			{#if isReady && audioStore.duration > 0}
+				<div class="pointer-events-none absolute inset-0 z-20">
 				{#each splitStore.points as point (point.id)}
 					{@const x = markerScreenX(point.time)}
 					{#if x !== null}
@@ -386,7 +412,12 @@
 						</button>
 					{/if}
 				{/each}
-			</div>
+				</div>
+			{/if}
+		</div>
+
+		{#if showBottomRuler && isReady && audioStore.duration > 0}
+			{@render ruler('bottom')}
 		{/if}
 	</div>
 
