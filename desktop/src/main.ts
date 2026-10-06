@@ -134,7 +134,10 @@ async function createWindow(): Promise<void> {
 		mainWindow = null;
 	});
 
-	void mainWindow.loadURL(`http://127.0.0.1:${serverPort}/index.html`);
+	// Load "/" — the SvelteKit router cannot match "/index.html" as a route
+	// and would render its "Not found" error page. The server maps "/" to
+	// index.html anyway.
+	void mainWindow.loadURL(`http://127.0.0.1:${serverPort}/`);
 }
 
 function registerIpc(): void {
