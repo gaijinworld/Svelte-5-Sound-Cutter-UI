@@ -8,7 +8,40 @@
 	import { splitStore } from '$lib/stores/splitStore.svelte';
 	import { VISIBLE_VERSION } from '$lib/version';
 
-	let waveformDisplay: WaveformDisplay;
+	let waveformDisplay = $state<WaveformDisplay | undefined>(undefined);
+	let mainEl = $state<HTMLElement | undefined>(undefined);
+
+	// Resizable workspace: pane height (bottom-edge grip) and sidebar width
+	// (vertical divider) are CSS vars consumed by .workspace-grid below lg.
+	let paneHeight = $state<number | null>(null);
+	let sidebarWidth = $state(360);
+
+	function startPaneResize(mode: 'height' | 'width', event: PointerEvent) {
+		event.preventDefault();
+		const handle = event.currentTarget as HTMLElement;
+		handle.setPointerCapture(event.pointerId);
+
+		const startX = event.clientX;
+		const startY = event.clientY;
+		const startHeight = paneHeight ?? mainEl?.getBoundingClientRect().height ?? window.innerHeight;
+		const startWidth = sidebarWidth;
+
+		const move = (e: PointerEvent) => {
+			if (mode === 'height') {
+				paneHeight = Math.min(2000, Math.max(320, startHeight + e.clientY - startY));
+			} else {
+				sidebarWidth = Math.min(640, Math.max(240, startWidth - (e.clientX - startX)));
+			}
+		};
+		const end = () => {
+			handle.removeEventListener('pointermove', move);
+			handle.removeEventListener('pointerup', end);
+			handle.removeEventListener('pointercancel', end);
+		};
+		handle.addEventListener('pointermove', move);
+		handle.addEventListener('pointerup', end);
+		handle.addEventListener('pointercancel', end);
+	}
 
 	function handlePlay() {
 		waveformDisplay?.play();
@@ -97,13 +130,26 @@
 	</header>
 
 	{#if audioStore.file}
-		<main class="grid min-h-[calc(100vh-4rem)] grid-cols-1 lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_360px]">
-			<section class="flex min-h-[440px] min-w-0 flex-col border-gray-300 bg-[#efefef] lg:min-h-0 lg:border-r">
+		<main
+			bind:this={mainEl}
+			class="workspace-grid grid min-h-[calc(100vh-4rem)] grid-cols-1"
+			style={`--pane-h: ${paneHeight !== null ? `${paneHeight}px` : 'calc(100vh - 4rem)'}; --sbw: ${sidebarWidth}px`}
+		>
+			<section class="flex min-h-[440px] min-w-0 flex-col border-gray-300 bg-[#efefef] lg:min-h-0">
 				<div class="min-h-0 flex-1 p-2 sm:p-4">
 					<div class="h-full min-h-[300px] rounded border border-gray-300 bg-white p-2 shadow-inner">
 						<WaveformDisplay bind:this={waveformDisplay} />
 					</div>
 				</div>
+
+				<div
+					role="separator"
+					aria-orientation="horizontal"
+					aria-label="Drag to resize waveform height"
+					title="Drag to resize waveform height"
+					class="mx-auto mb-1 h-1.5 w-24 shrink-0 cursor-row-resize touch-none rounded-full bg-gray-300 transition-colors hover:bg-blue-500/70"
+					onpointerdown={(event) => startPaneResize('height', event)}
+				></div>
 
 				<PlaybackBar
 					onPlay={handlePlay}
@@ -112,6 +158,15 @@
 					onSeek={handleSeek}
 				/>
 			</section>
+
+			<div
+				role="separator"
+				aria-orientation="vertical"
+				aria-label="Drag to resize split-points panel width"
+				title="Drag to resize panel width"
+				class="hidden cursor-col-resize touch-none bg-gray-300 transition-colors hover:bg-blue-500/70 lg:block"
+				onpointerdown={(event) => startPaneResize('width', event)}
+			></div>
 
 			<aside class="flex min-h-[360px] min-w-0 flex-col border-t border-gray-300 bg-white lg:min-h-0 lg:border-t-0">
 				<div class="min-h-0 flex-1">
@@ -133,3 +188,16 @@
 		</main>
 	{/if}
 </div>
+
+<style>
+	/* Desktop two-pane workspace. Pane height (--pane-h) and sidebar width
+	   (--sbw) are driven by the resize grips; defaults preserve the
+	   full-viewport layout. */
+	@media (min-width: 1024px) {
+		.workspace-grid {
+			height: var(--pane-h, calc(100vh - 4rem));
+			min-height: 0;
+			grid-template-columns: minmax(0, 1fr) 8px var(--sbw, 360px);
+		}
+	}
+</style>
