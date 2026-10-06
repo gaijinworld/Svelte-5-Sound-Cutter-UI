@@ -7,6 +7,7 @@
 	import type { SplitMode, SplitResult } from '$lib/media';
 	import { buildZipName } from '$lib/utils/export';
 	import { buildPartName } from '$lib/utils/outputName';
+	import { detectAudioFormat, outputExtension } from '$lib/utils/audioFormat';
 
 	type DownloadResult = SplitResult & { url: string };
 
@@ -56,6 +57,8 @@
 		const engine = new BrowserFfmpegEngine();
 		activeEngine = engine;
 		const created: DownloadResult[] = [];
+		const format = detectAudioFormat(file);
+		const ext = format ? outputExtension(format) : 'mp3';
 
 		try {
 			await engine.prepare(file);
@@ -64,7 +67,7 @@
 				if (cancelRequested) break;
 
 				const segment = segments[index];
-				const name = buildPartName(file.name, segment.index);
+				const name = buildPartName(file.name, segment.index, ext);
 				currentPart = name;
 				statusMessage = `${mode === 'lossless' ? 'Lossless' : 'Precise'} split ${index + 1} of ${segments.length}`;
 
@@ -80,13 +83,13 @@
 				statusMessage = created.length > 0 ? 'Cancelled — completed parts are still available.' : 'Cancelled.';
 			} else {
 				progress = 100;
-				statusMessage = `${created.length} MP3 part${created.length === 1 ? '' : 's'} ready.`;
+				statusMessage = `${created.length} ${ext.toUpperCase()} part${created.length === 1 ? '' : 's'} ready.`;
 			}
 		} catch (error) {
 			if (cancelRequested) {
 				statusMessage = created.length > 0 ? 'Cancelled — completed parts are still available.' : 'Cancelled.';
 			} else {
-				errorMessage = error instanceof Error ? error.message : 'MP3 splitting failed.';
+				errorMessage = error instanceof Error ? error.message : 'Audio splitting failed.';
 				statusMessage = null;
 			}
 		} finally {
@@ -144,7 +147,7 @@
 				checked={mode === 'lossless'}
 				onchange={() => (mode = 'lossless')}
 			/>
-			<span><strong>Fast / Lossless</strong> — copies original MP3 frames with no quality loss.</span>
+			<span><strong>Fast / Lossless</strong> — copies the original audio stream with no quality loss.</span>
 		</label>
 		<label class="flex cursor-pointer items-start gap-2 py-1 text-xs">
 			<input
@@ -154,7 +157,7 @@
 				checked={mode === 'precise'}
 				onchange={() => (mode = 'precise')}
 			/>
-			<span><strong>Precise</strong> — re-encodes MP3 audio for tighter requested boundaries.</span>
+			<span><strong>Precise</strong> — re-encodes to the same format for tighter requested boundaries.</span>
 		</label>
 	</fieldset>
 
@@ -195,7 +198,7 @@
 	{#if results.length > 0}
 		<div class="rounded border border-green-200 bg-green-50 p-2">
 			<div class="mb-2 flex items-center justify-between gap-2">
-				<div class="text-xs font-semibold text-green-900">MP3 parts ready</div>
+				<div class="text-xs font-semibold text-green-900">Audio parts ready</div>
 				{#if results.length > 1}
 					<button
 						class="rounded border border-green-300 bg-white px-2 py-1 text-[11px] font-medium text-green-800 hover:bg-green-100 disabled:opacity-50"
@@ -229,7 +232,7 @@
 
 	<p class="text-[11px] leading-4 text-gray-500">
 		{mode === 'lossless'
-			? 'Lossless mode preserves the original MP3 stream, but cuts can align to nearby MP3 frame boundaries.'
-			: 'Precise mode re-encodes with libmp3lame quality level 2, so output quality/bitrate characteristics may differ from the source.'}
+			? 'Lossless mode preserves the original audio stream, but cuts may snap to nearby frame/packet boundaries.'
+			: 'Precise mode re-encodes the audio stream, so output quality/bitrate characteristics may differ from the source.'}
 	</p>
 </div>

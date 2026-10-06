@@ -51,7 +51,7 @@
 				{#if segments.length === 0}
 					<tr>
 						<td colspan="4" class="px-4 py-8 text-center text-gray-500">
-							Open an MP3 to generate the first segment.
+							Open an audio file to generate the first segment.
 						</td>
 					</tr>
 				{/if}

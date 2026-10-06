@@ -2,8 +2,10 @@
 	import { onDestroy, onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
 	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.js';
+	import { decodeToWavBlob } from '$lib/audio/ffmpegDecode';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { detectAudioFormat, needsWasmDecode } from '$lib/utils/audioFormat';
 	import { formatTimecode, parseTimecode } from '$lib/utils/time';
 
 	let container = $state<HTMLDivElement | undefined>(undefined);
@@ -21,6 +23,13 @@
 	let scrollLeft = $state(0);
 	let viewportWidth = $state(0);
 	let contentWidth = $state(0);
+
+	// Preview decode path: native object URL first; formats the browser
+	// cannot decode (WMA/ASF, or any decodeAudioData rejection) are
+	// transcoded to WAV via ffmpeg.wasm for display only.
+	let previewUrl: string | null = null;
+	let wasmFallbackUsed = false;
+	let loadNote = $state<string | null>(null);
 
 	const scrollable = $derived(contentWidth > viewportWidth + 1);
 	const thumbWidthPct = $derived(
@@ -105,8 +114,16 @@
 		wavesurfer.on('finish', () => audioStore.setPlaying(false));
 
 		wavesurfer.on('error', (error) => {
+			const file = audioStore.file;
+			if (file && !wasmFallbackUsed && wavesurfer) {
+				// Native decode failed — try ffmpeg.wasm once (WMA, odd AAC/ALAC…).
+				wasmFallbackUsed = true;
+				void previewViaWasm(file);
+				return;
+			}
 			isLoading = false;
 			isReady = false;
+			loadNote = null;
 			errorMessage = error instanceof Error ? error.message : 'Failed to load audio file';
 		});
 	}
@@ -242,24 +259,56 @@
 		};
 	});
 
+	async function previewViaWasm(file: File) {
+		if (!wavesurfer) return;
+		try {
+			isLoading = true;
+			loadNote = 'Browser cannot decode this format — converting via FFmpeg…';
+			const blob = await decodeToWavBlob(file);
+			if (audioStore.file !== file) return; // user picked another file meanwhile
+			if (previewUrl) URL.revokeObjectURL(previewUrl);
+			previewUrl = URL.createObjectURL(blob);
+			loadNote = null;
+			wavesurfer.load(previewUrl);
+		} catch (error) {
+			isLoading = false;
+			loadNote = null;
+			errorMessage =
+				error instanceof Error ? error.message : 'Could not decode this audio file.';
+		}
+	}
+
 	$effect(() => {
+		const file = audioStore.file;
 		const objectUrl = audioStore.objectUrl;
 		const ws = wavesurfer;
-		if (!objectUrl || !ws) return;
+		if (!file || !objectUrl || !ws) return;
 
 		isLoading = true;
 		isReady = false;
 		errorMessage = null;
+		loadNote = null;
 		zoomPercent = 100;
 		zoomSelect = '100';
 		pendingAnchor = null;
+		wasmFallbackUsed = false;
+		if (previewUrl) {
+			URL.revokeObjectURL(previewUrl);
+			previewUrl = null;
+		}
 		splitStore.selectPoint(null);
-		ws.load(objectUrl);
+		if (needsWasmDecode(detectAudioFormat(file))) {
+			wasmFallbackUsed = true;
+			void previewViaWasm(file);
+		} else {
+			ws.load(objectUrl);
+		}
 	});
 
 	onMount(initWaveSurfer);
 
 	onDestroy(() => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
 		wavesurfer?.destroy();
 	});
 
@@ -290,7 +339,7 @@
 		<div class="absolute inset-0 z-30 flex items-center justify-center bg-white/85">
 			<div class="flex items-center gap-3 text-sm text-gray-600">
 				<div class="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
-				<span>Loading waveform…</span>
+				<span>{loadNote ?? 'Loading waveform…'}</span>
 			</div>
 		</div>
 	{/if}
@@ -302,7 +351,7 @@
 			class="waveform-container w-full min-h-[230px] flex-1 overflow-x-auto"
 			onwheel={handleWheel}
 			role="application"
-			aria-label="MP3 waveform. Use the mouse wheel to zoom and click to seek."
+			aria-label="Audio waveform. Use the mouse wheel to zoom and click to seek."
 		></div>
 
 		{#if isReady && audioStore.duration > 0}

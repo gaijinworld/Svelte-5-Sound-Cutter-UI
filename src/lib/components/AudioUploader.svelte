@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { AUDIO_ACCEPT, isSupportedAudioFile } from '$lib/utils/audioFormat';
 
 	interface Props {
 		compact?: boolean;
@@ -13,20 +14,16 @@
 	let isDragging = $state(false);
 	let uploadError = $state<string | null>(null);
 
-	function isMp3(file: File): boolean {
-		return file.type === 'audio/mpeg' || file.type === 'audio/mp3' || /\.mp3$/i.test(file.name);
-	}
-
 	function loadFile(file: File) {
-		if (!isMp3(file)) {
-			uploadError = 'Please choose an MP3 file.';
+		if (!isSupportedAudioFile(file)) {
+			uploadError = 'Please choose an audio file (MP3, WAV, M4A, AAC, OGG, FLAC, WMA…).';
 			return;
 		}
 
 		if (
 			file.size >= LARGE_FILE_BYTES &&
 			!window.confirm(
-				`This MP3 is ${(file.size / 1024 / 1024).toFixed(0)} MB. Large files may require significant browser memory. Continue?`
+				`This file is ${(file.size / 1024 / 1024).toFixed(0)} MB. Large files may require significant browser memory. Continue?`
 			)
 		) {
 			return;
@@ -69,7 +66,7 @@
 			class="shrink-0 rounded border border-gray-400 bg-[#f5f5f5] px-3 py-2 text-sm text-gray-800 hover:bg-white"
 			onclick={openFilePicker}
 		>
-			📂 Open MP3
+			📂 Open audio
 		</button>
 	</div>
 {:else}
@@ -93,14 +90,14 @@
 		>
 			🎵
 		</div>
-		<div class="text-lg font-semibold text-gray-800 sm:text-xl">Open an MP3 file</div>
+		<div class="text-lg font-semibold text-gray-800 sm:text-xl">Open an audio file</div>
 		<div class="mt-2 text-sm text-gray-500">
-			Drop an MP3 anywhere on this card, or browse your files. Processing stays in your browser.
+			Drop a file anywhere on this card, or browse your files. MP3, WAV, M4A, AAC, OGG, FLAC, WMA — processing stays in your browser.
 		</div>
 		<span
 			class="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors group-hover:bg-blue-500"
 		>
-			📂 Browse MP3…
+			📂 Browse audio…
 		</span>
 		<div class="mt-4 text-xs text-gray-400">Files 250 MB and larger show a browser-memory warning before loading.</div>
 	</button>
@@ -109,7 +106,7 @@
 <input
 	bind:this={fileInput}
 	type="file"
-	accept=".mp3,audio/mpeg,audio/mp3"
+	accept={AUDIO_ACCEPT}
 	class="hidden"
 	onchange={handleFileSelect}
 />
