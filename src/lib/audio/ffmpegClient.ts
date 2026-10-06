@@ -1,7 +1,9 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
 
-const BASE_URL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+const DEFAULT_BASE_URL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+const CONFIGURED_BASE_URL = import.meta.env.VITE_FFMPEG_CORE_BASE_URL?.trim();
+const BASE_URL = (CONFIGURED_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, '');
 const FFMPEG_TIMEOUT = 30000;
 
 let ffmpeg: FFmpeg | null = null;
@@ -15,7 +17,7 @@ export async function loadFfmpeg(): Promise<FFmpeg> {
 		const instance = new FFmpeg();
 
 		const timeoutPromise = new Promise<never>((_, reject) => {
-			setTimeout(() => reject(new Error('FFmpeg load timed out. Check your internet connection.')), FFMPEG_TIMEOUT);
+			setTimeout(() => reject(new Error('FFmpeg load timed out. Check the configured FFmpeg core URL or your connection.')), FFMPEG_TIMEOUT);
 		});
 
 		await Promise.race([
