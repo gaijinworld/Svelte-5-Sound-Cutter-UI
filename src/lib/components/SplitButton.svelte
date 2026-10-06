@@ -3,8 +3,8 @@
 	import { zipSync } from 'fflate';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
-	import { BrowserFfmpegEngine } from '$lib/media';
-	import type { SplitMode, SplitResult } from '$lib/media';
+	import { createSplitEngine, isDesktopShell } from '$lib/media';
+	import type { MediaSplitEngine, SplitMode, SplitResult } from '$lib/media';
 	import { buildZipName } from '$lib/utils/export';
 	import { buildPartName } from '$lib/utils/outputName';
 	import { detectAudioFormat, outputExtension } from '$lib/utils/audioFormat';
@@ -19,8 +19,14 @@
 	let results = $state<DownloadResult[]>([]);
 	let errorMessage = $state<string | null>(null);
 	let statusMessage = $state<string | null>(null);
-	let activeEngine: BrowserFfmpegEngine | null = null;
+	let partPct = $state(0);
+	let savedDir = $state<string | null>(null);
+	let isSaving = $state(false);
+	let desktopJobId = $state<string | null>(null);
+	let activeEngine: MediaSplitEngine | null = null;
 	let cancelRequested = false;
+
+	const isDesktop = isDesktopShell();
 
 	let selectedCount = $derived(splitStore.segments.filter((segment) => segment.enabled).length);
 
@@ -49,12 +55,15 @@
 		isSplitting = true;
 		cancelRequested = false;
 		progress = 0;
+		partPct = 0;
 		currentPart = '';
 		errorMessage = null;
-		statusMessage = 'Preparing FFmpeg…';
+		savedDir = null;
+		desktopJobId = null;
+		statusMessage = isDesktop ? 'Preparing FFmpeg…' : 'Preparing FFmpeg.wasm…';
 		clearResults();
 
-		const engine = new BrowserFfmpegEngine();
+		const engine = createSplitEngine();
 		activeEngine = engine;
 		const created: DownloadResult[] = [];
 		const format = detectAudioFormat(file);
@@ -69,9 +78,16 @@
 				const segment = segments[index];
 				const name = buildPartName(file.name, segment.index, ext);
 				currentPart = name;
+				partPct = 0;
 				statusMessage = `${mode === 'lossless' ? 'Lossless' : 'Precise'} split ${index + 1} of ${segments.length}`;
 
-				const result = await engine.split(segment, name, { mode });
+				const result = await engine.split(segment, name, {
+					mode,
+					onProgress: (pct) => {
+						partPct = Math.round(pct);
+						statusMessage = `${mode === 'lossless' ? 'Lossless' : 'Precise'} split ${index + 1} of ${segments.length} — ${partPct}%`;
+					}
+				});
 				if (cancelRequested) break;
 
 				created.push({ ...result, url: URL.createObjectURL(result.blob) });
@@ -84,6 +100,11 @@
 			} else {
 				progress = 100;
 				statusMessage = `${created.length} ${ext.toUpperCase()} part${created.length === 1 ? '' : 's'} ready.`;
+			}
+
+			if (isDesktop && created.length > 0) {
+				const desktopEngine = engine as { currentJobId?: string | null };
+				desktopJobId = desktopEngine.currentJobId ?? null;
 			}
 		} catch (error) {
 			if (cancelRequested) {
@@ -105,6 +126,31 @@
 		cancelRequested = true;
 		statusMessage = 'Cancelling…';
 		await activeEngine.cancel();
+	}
+
+	async function saveAllToFolder() {
+		const desktop = window.MP3S_DESKTOP;
+		if (!desktop || !desktopJobId || isSaving) return;
+		isSaving = true;
+		errorMessage = null;
+		try {
+			const res = await desktop.saveOutputs({ jobId: desktopJobId });
+			if (!res.cancelled && res.dir) {
+				savedDir = res.dir;
+				statusMessage = `Saved ${res.files?.length ?? results.length} part${(res.files?.length ?? 1) === 1 ? '' : 's'} to ${res.dir}`;
+			}
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Could not save the parts.';
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	async function revealSavedDir() {
+		const desktop = window.MP3S_DESKTOP;
+		if (!desktop || !savedDir) return;
+		const err = await desktop.revealPath(savedDir);
+		if (err) errorMessage = err;
 	}
 
 	async function downloadZip() {
@@ -203,10 +249,30 @@
 		<div class="text-[11px] text-gray-600">{statusMessage}</div>
 	{/if}
 
+	{#if savedDir}
+		<button
+			class="block max-w-full truncate text-left text-[11px] text-indigo-700 underline-offset-2 hover:underline"
+			onclick={revealSavedDir}
+			title={savedDir}
+		>
+			📁 {savedDir} — open in Explorer
+		</button>
+	{/if}
+
 	{#if results.length > 0}
 		<div class="rounded-lg border border-green-200 bg-green-50 p-2.5 shadow-sm">
 			<div class="mb-2 flex items-center justify-between gap-2">
 				<div class="text-xs font-semibold text-green-900">Audio parts ready</div>
+				{#if isDesktop && desktopJobId}
+					<button
+						class="rounded-md bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50"
+						onclick={saveAllToFolder}
+						disabled={isSaving}
+						title="Copy all produced parts into a folder on this PC"
+					>
+						{isSaving ? 'Saving…' : 'Save all to folder…'}
+					</button>
+				{/if}
 				{#if results.length > 1}
 					<button
 						class="rounded-md bg-green-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-green-500 disabled:opacity-50"

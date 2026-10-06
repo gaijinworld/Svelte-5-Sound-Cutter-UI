@@ -8,6 +8,10 @@ node_modules
 /.svelte-kit
 /build
 
+# Electron desktop
+/desktop/dist
+/desktop/dist-release
+
 # OS
 .DS_Store
 Thumbs.db
