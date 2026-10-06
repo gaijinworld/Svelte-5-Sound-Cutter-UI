@@ -15,6 +15,20 @@
 	let showTopRuler = $state(false);
 	let showBottomRuler = $state(false);
 
+	// Scroll-space metrics of the waveform content — used to keep split
+	// markers glued to their timestamps and to drive the custom scrollbar.
+	let scrollLeft = $state(0);
+	let viewportWidth = $state(0);
+	let contentWidth = $state(0);
+
+	const scrollable = $derived(contentWidth > viewportWidth + 1);
+	const thumbWidthPct = $derived(
+		contentWidth > 0 ? Math.min(100, (viewportWidth / contentWidth) * 100) : 100
+	);
+	const thumbLeftPct = $derived(
+		contentWidth > 0 ? Math.min(100 - thumbWidthPct, (scrollLeft / contentWidth) * 100) : 0
+	);
+
 	const MIN_ZOOM = 1;
 	const MAX_ZOOM = 500;
 	const DEFAULT_SAMPLE_RATE = 44_100;
@@ -38,6 +52,7 @@
 			barRadius: 1,
 			normalize: true,
 			minPxPerSec: 1,
+			hideScrollbar: true,
 			sampleRate: DEFAULT_SAMPLE_RATE
 		});
 
@@ -47,7 +62,14 @@
 			errorMessage = null;
 			audioStore.setBuffer(wavesurfer?.getDecodedData() ?? null);
 			audioStore.setCurrentTime(0);
+			syncScrollMetrics();
 		});
+
+		wavesurfer.on('scroll', () => {
+			scrollLeft = wavesurfer?.getScroll() ?? 0;
+		});
+		wavesurfer.on('redrawcomplete', syncScrollMetrics);
+		wavesurfer.on('resize', syncScrollMetrics);
 
 		wavesurfer.on('loading', () => {
 			isLoading = true;
@@ -77,9 +99,56 @@
 		wavesurfer.zoom(zoomLevel);
 	}
 
-	function markerLeft(time: number): number {
-		if (audioStore.duration <= 0) return 0;
-		return Math.max(0, Math.min(100, (time / audioStore.duration) * 100));
+	// Markers live in an overlay over the *visible* part of the waveform, so
+	// their px position = content offset - scroll offset. Returns null when
+	// the marker is scrolled out of view.
+	function markerScreenX(time: number): number | null {
+		if (audioStore.duration <= 0 || contentWidth <= 0) return null;
+		const x = (time / audioStore.duration) * contentWidth - scrollLeft;
+		if (x < -16 || x > viewportWidth + 16) return null;
+		return x;
+	}
+
+	function syncScrollMetrics() {
+		if (!wavesurfer) return;
+		scrollLeft = wavesurfer.getScroll();
+		viewportWidth = wavesurfer.getWidth();
+		contentWidth = wavesurfer.getWrapper()?.getBoundingClientRect().width ?? 0;
+	}
+
+	function startThumbDrag(event: PointerEvent) {
+		event.preventDefault();
+		event.stopPropagation();
+		const thumb = event.currentTarget as HTMLElement;
+		const track = thumb.parentElement as HTMLElement;
+		thumb.setPointerCapture(event.pointerId);
+
+		const startX = event.clientX;
+		const startScroll = scrollLeft;
+		const trackW = track.clientWidth;
+		const thumbW = thumb.offsetWidth;
+		const maxScroll = Math.max(0, contentWidth - viewportWidth);
+		const travel = Math.max(1, trackW - thumbW);
+
+		const move = (e: PointerEvent) => {
+			const ratio = (e.clientX - startX) / travel;
+			wavesurfer?.setScroll(Math.max(0, Math.min(maxScroll, startScroll + ratio * maxScroll)));
+		};
+		const end = () => {
+			thumb.removeEventListener('pointermove', move);
+			thumb.removeEventListener('pointerup', end);
+			thumb.removeEventListener('pointercancel', end);
+		};
+		thumb.addEventListener('pointermove', move);
+		thumb.addEventListener('pointerup', end);
+		thumb.addEventListener('pointercancel', end);
+	}
+
+	function handleTrackPointerDown(event: PointerEvent) {
+		const track = event.currentTarget as HTMLElement;
+		const rect = track.getBoundingClientRect();
+		const targetScroll = ((event.clientX - rect.left) / rect.width) * contentWidth - viewportWidth / 2;
+		wavesurfer?.setScroll(Math.max(0, Math.min(contentWidth - viewportWidth, targetScroll)));
 	}
 
 	function commitSelectedPointTime(event: Event) {
@@ -178,10 +247,11 @@
 		</div>
 	{/if}
 
-	<div class="relative flex-1 overflow-hidden">
+	<div class="relative flex flex-1 flex-col overflow-hidden">
 		<div
 			bind:this={container}
-			class="waveform-container h-full min-h-[230px] w-full overflow-x-auto"
+			id="mp3s-waveform-scroll"
+			class="waveform-container w-full min-h-[230px] flex-1 overflow-x-auto"
 			onwheel={handleWheel}
 			role="application"
 			aria-label="MP3 waveform. Use the mouse wheel to zoom and click to seek."
@@ -190,35 +260,59 @@
 		{#if isReady && audioStore.duration > 0}
 			<div class="pointer-events-none absolute inset-0 z-20">
 				{#each splitStore.points as point (point.id)}
-					<button
-						class={`pointer-events-auto absolute top-0 h-full w-5 -translate-x-1/2 cursor-pointer border-0 bg-transparent p-0 ${
-							point.id === splitStore.selectedPointId ? 'z-20' : 'z-10'
-						}`}
-						style={`left: ${markerLeft(point.time)}%`}
-						onclick={(event) => {
-							event.stopPropagation();
-							splitStore.selectPoint(point.id);
-						}}
-						title={`Split point ${formatTimecode(point.time)}`}
-						aria-label={`Select split point at ${formatTimecode(point.time)}`}
-					>
-						<span
-							class={`absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 ${
-								point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
+					{@const x = markerScreenX(point.time)}
+					{#if x !== null}
+						<button
+							class={`pointer-events-auto absolute top-0 h-full w-5 -translate-x-1/2 cursor-pointer border-0 bg-transparent p-0 ${
+								point.id === splitStore.selectedPointId ? 'z-20' : 'z-10'
 							}`}
-						></span>
-						<span
-							class={`absolute left-1/2 top-1 -translate-x-1/2 rounded px-1 py-0.5 text-[10px] font-semibold text-white ${
-								point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
-							}`}
+							style={`left: ${x}px`}
+							onclick={(event) => {
+								event.stopPropagation();
+								splitStore.selectPoint(point.id);
+							}}
+							title={`Split point ${formatTimecode(point.time)}`}
+							aria-label={`Select split point at ${formatTimecode(point.time)}`}
 						>
-							{splitStore.points.findIndex((candidate) => candidate.id === point.id) + 1}
-						</span>
-					</button>
+							<span
+								class={`absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 ${
+									point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
+								}`}
+							></span>
+							<span
+								class={`absolute left-1/2 top-1 -translate-x-1/2 rounded px-1 py-0.5 text-[10px] font-semibold text-white ${
+									point.id === splitStore.selectedPointId ? 'bg-red-600' : 'bg-blue-600'
+								}`}
+							>
+								{splitStore.points.findIndex((candidate) => candidate.id === point.id) + 1}
+							</span>
+						</button>
+					{/if}
 				{/each}
 			</div>
 		{/if}
 	</div>
+
+	{#if scrollable}
+		<div
+			class="relative mt-1.5 h-2.5 shrink-0 touch-none select-none rounded-full bg-gray-200"
+			role="scrollbar"
+			aria-orientation="horizontal"
+			aria-label="Scroll waveform horizontally"
+			aria-controls="mp3s-waveform-scroll"
+			aria-valuemin={0}
+			aria-valuemax={Math.round(contentWidth - viewportWidth)}
+			aria-valuenow={Math.round(scrollLeft)}
+			tabindex="0"
+			onpointerdown={handleTrackPointerDown}
+		>
+			<div
+				class="absolute top-0 h-full cursor-grab rounded-full bg-gray-400 transition-colors hover:bg-blue-500/80 active:cursor-grabbing active:bg-blue-500"
+				style={`left: ${thumbLeftPct}%; width: ${thumbWidthPct}%`}
+				onpointerdown={startThumbDrag}
+			></div>
+		</div>
+	{/if}
 
 	<div class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-gray-200 pt-2 text-xs text-gray-500">
 		<span class="font-mono">{formatTimecode(audioStore.currentTime)}</span>
