@@ -29,7 +29,7 @@
 			progressColor: '#2563eb',
 			cursorColor: '#111827',
 			cursorWidth: 2,
-			height: 210,
+			height: 'auto',
 			barWidth: 2,
 			barGap: 1,
 			barRadius: 1,
