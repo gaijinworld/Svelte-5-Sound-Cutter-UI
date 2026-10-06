@@ -74,8 +74,8 @@
 	</div>
 {:else}
 	<button
-		class={`mx-auto flex min-h-72 w-full max-w-3xl flex-col items-center justify-center rounded-xl border-2 border-dashed bg-white p-8 text-center transition ${
-			isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-400 hover:border-gray-500'
+		class={`group mx-auto flex min-h-72 w-full max-w-3xl cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-gradient-to-b from-white to-blue-50/70 p-6 text-center shadow-sm transition-all hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300 sm:p-10 ${
+			isDragging ? 'scale-[1.01] border-blue-600 bg-blue-50 shadow-lg' : 'border-blue-400/70'
 		}`}
 		onclick={openFilePicker}
 		ondrop={handleDrop}
@@ -85,10 +85,24 @@
 		}}
 		ondragleave={() => (isDragging = false)}
 	>
-		<div class="mb-4 text-5xl">🎵</div>
-		<div class="text-lg font-semibold text-gray-800">Open an MP3 file</div>
-		<div class="mt-2 text-sm text-gray-500">Drop an MP3 here or click to browse. Processing stays in your browser.</div>
-		<div class="mt-3 text-xs text-gray-400">Files 250 MB and larger show a browser-memory warning before loading.</div>
+		<div
+			class={`mb-4 flex h-16 w-16 items-center justify-center rounded-full text-3xl shadow-inner transition-colors sm:h-20 sm:w-20 sm:text-4xl ${
+				isDragging ? 'bg-blue-200' : 'bg-blue-100 group-hover:bg-blue-200'
+			}`}
+			aria-hidden="true"
+		>
+			🎵
+		</div>
+		<div class="text-lg font-semibold text-gray-800 sm:text-xl">Open an MP3 file</div>
+		<div class="mt-2 text-sm text-gray-500">
+			Drop an MP3 anywhere on this card, or browse your files. Processing stays in your browser.
+		</div>
+		<span
+			class="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors group-hover:bg-blue-500"
+		>
+			📂 Browse MP3…
+		</span>
+		<div class="mt-4 text-xs text-gray-400">Files 250 MB and larger show a browser-memory warning before loading.</div>
 	</button>
 {/if}
 
