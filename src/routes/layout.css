@@ -19,3 +19,14 @@
 		display: block;
 	}
 }
+
+/*
+ * Blocksy also ships unlayered `.sticky{background:transparent}` (meant for
+ * WP sticky posts), which silently nukes the background of any element using
+ * Tailwind's `sticky` class. Use this collision-free class for sticky
+ * positioning instead.
+ */
+.mp3s-sticky {
+	position: sticky;
+	top: 0;
+}
