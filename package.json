@@ -19,7 +19,11 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"licenses:generate": "node scripts/generate-third-party-licenses.mjs",
-		"deploy:localwp": "node scripts/deploy-localwp.mjs"
+		"deploy:localwp": "node scripts/deploy-localwp.mjs",
+		"desktop:dev": "pnpm -F audio-splitter-desktop dev",
+		"desktop:build": "pnpm -F audio-splitter-desktop build",
+		"desktop:smoke": "pnpm -F audio-splitter-desktop test:smoke",
+		"desktop:package": "pnpm -F audio-splitter-desktop package:win:all"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^7.0.0",

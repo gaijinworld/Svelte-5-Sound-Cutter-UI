@@ -1,0 +1,59 @@
+name: Release Desktop
+
+# Tag-driven Windows release, mirroring telegram-media-downloader-v3's flow.
+# Push a tag like v2026.10.06.01 → builds NSIS installer + portable exe +
+# latest.yml and attaches them to a GitHub Release. electron-builder always
+# runs with --publish never; only action-gh-release uploads artifacts.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.21.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web renderer
+        run: pnpm build
+
+      - name: Build desktop (main/preload + copy renderer)
+        run: pnpm -F audio-splitter-desktop build
+
+      - name: Package Windows (NSIS + portable)
+        working-directory: desktop
+        run: pnpm exec electron-builder --win --publish never
+
+      - name: Smoke test unpacked build
+        working-directory: desktop
+        run: node scripts/smoke.cjs --packaged
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/dist-release/*.exe
+            desktop/dist-release/*.blockmap
+            desktop/dist-release/latest.yml
+          generate_release_notes: true

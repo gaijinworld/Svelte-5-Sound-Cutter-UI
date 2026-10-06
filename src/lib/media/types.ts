@@ -4,6 +4,9 @@ export type SplitMode = 'lossless' | 'precise';
 
 export interface SplitOptions {
 	mode?: SplitMode;
+	/** Per-part progress (0–100). Native engines stream FFmpeg progress; the
+	 *  browser engine may ignore it. */
+	onProgress?: (pct: number) => void;
 }
 
 export interface SplitResult {

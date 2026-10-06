@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { rememberDesktopFilePath } from '$lib/media';
 	import { AUDIO_ACCEPT, isSupportedAudioFile } from '$lib/utils/audioFormat';
 
 	interface Props {
@@ -14,10 +15,19 @@
 	let isDragging = $state(false);
 	let uploadError = $state<string | null>(null);
 
+	const isDesktop = typeof window !== 'undefined' && !!window.MP3S_DESKTOP;
+
 	function loadFile(file: File) {
 		if (!isSupportedAudioFile(file)) {
 			uploadError = 'Please choose an audio file (MP3, WAV, M4A, AAC, OGG, FLAC, WMA…).';
 			return;
+		}
+
+		// Dropped/picked Files have real paths in Electron — remember them so
+		// the native engine can split straight from disk (no WASM copy).
+		if (isDesktop) {
+			const realPath = window.MP3S_DESKTOP?.pathForFile(file);
+			if (realPath) rememberDesktopFilePath(file, realPath);
 		}
 
 		if (
@@ -35,8 +45,30 @@
 		audioStore.setCurrentTime(0);
 	}
 
-	function openFilePicker() {
+	async function openFilePicker() {
 		uploadError = null;
+
+		// Desktop shell: native open dialog; the main process registers the
+		// path and returns a loopback URL we stream the preview bytes from.
+		if (isDesktop) {
+			const desktop = window.MP3S_DESKTOP;
+			if (!desktop) return;
+			try {
+				const res = await desktop.openAudio();
+				if (res.cancelled || !res.url || !res.name || !res.path) return;
+				const blob = await fetch(res.url).then((r) => {
+					if (!r.ok) throw new Error(`Could not read the selected file (HTTP ${r.status}).`);
+					return r.blob();
+				});
+				const file = new File([blob], res.name, { type: blob.type });
+				rememberDesktopFilePath(file, res.path);
+				loadFile(file);
+			} catch (error) {
+				uploadError = error instanceof Error ? error.message : 'Could not open the file.';
+			}
+			return;
+		}
+
 		fileInput?.click();
 	}
 

@@ -1,0 +1,72 @@
+{
+	"name": "audio-splitter-desktop",
+	"version": "2026.10.06.01",
+	"description": "Audio Splitter — Electron desktop app (native FFmpeg splitting)",
+	"private": true,
+	"main": "dist/main.js",
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"sync-version": "node ./scripts/sync-version.cjs",
+		"build:ts": "tsup src/main.ts src/preload.ts --format cjs --target node20 --out-dir dist --external electron --clean",
+		"copy:web": "node ./scripts/copy-renderer.cjs",
+		"build": "pnpm sync-version && pnpm typecheck && pnpm build:ts && pnpm copy:web",
+		"dev": "pnpm build:ts && electron dist/main.js",
+		"test:smoke": "node scripts/smoke.cjs",
+		"package:win": "pnpm build && electron-builder --win nsis --publish never",
+		"package:win:portable": "pnpm build && electron-builder --win portable --publish never",
+		"package:win:all": "pnpm build && electron-builder --win --publish never",
+		"package:win:local": "pnpm build && node scripts/package-temp-output.cjs"
+	},
+	"dependencies": {
+		"ffmpeg-static": "^5.2.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"electron": "^39.2.7",
+		"electron-builder": "^26.0.12",
+		"playwright-core": "^1.49.0",
+		"tsup": "^8.3.5",
+		"typescript": "^5.9.3"
+	},
+	"build": {
+		"appId": "com.gaijinworld.audiosplitter",
+		"productName": "Audio Splitter",
+		"directories": {
+			"output": "dist-release"
+		},
+		"files": [
+			"dist/**/*",
+			"assets/**/*",
+			"package.json",
+			"NOTICE"
+		],
+		"asarUnpack": [
+			"node_modules/ffmpeg-static/**"
+		],
+		"win": {
+			"icon": "assets/icon.png",
+			"target": [
+				"nsis",
+				"portable"
+			],
+			"signExecutable": false
+		},
+		"nsis": {
+			"oneClick": false,
+			"allowToChangeInstallationDirectory": true,
+			"createDesktopShortcut": true,
+			"createStartMenuShortcut": true,
+			"artifactName": "Audio.Splitter.Setup.${version}.exe"
+		},
+		"portable": {
+			"artifactName": "Audio.Splitter.${version}.Portable.exe"
+		},
+		"publish": [
+			{
+				"provider": "github",
+				"owner": "gaijinworld",
+				"repo": "Svelte-5-Sound-Cutter-UI"
+			}
+		]
+	}
+}

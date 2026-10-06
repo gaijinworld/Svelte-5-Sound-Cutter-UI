@@ -1,2 +1,6 @@
+packages:
+  - desktop
 onlyBuiltDependencies:
   - esbuild
+  - electron
+  - ffmpeg-static

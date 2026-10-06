@@ -98,5 +98,22 @@ ffmpeg -ss START -i input.mp3 -t DURATION -map 0:a:0 -c:a libmp3lame -q:a 2 outp
 - Cancellation terminates the active job without killing the app.
 - Windows and macOS packaging/documentation are reproducible.
 
+## Status
+
+- **2A + 2B implemented** — Electron shell, loopback renderer server, narrow
+  `MP3S_DESKTOP` IPC bridge, native FFmpeg splitting via `ffmpeg-static`,
+  progress events, cancellation, native open/output dialogs, "Save all to
+  folder" + Explorer reveal, Windows NSIS + portable packaging, and a
+  Playwright Electron smoke test (dev + packaged). See `desktop/README.md`
+  for the build/run/package walkthrough and `desktop/plan.md` for the
+  implementation plan that drove it.
+- **Deferred**: macOS packaging (needs Apple cert/hardware for hardened
+  runtime + notarization), Windows code signing / SmartScreen strategy, and a
+  >2 GB source-file QA matrix.
+
 ## PR strategy
-This phase branch currently records the desktop implementation contract only. Do not add Electron dependencies by hand without regenerating `pnpm-lock.yaml` locally. When Web v1 is merged and verified, implement the Electron shell on this branch (or split Phase 2 into 2A shell/IPC, 2B native FFmpeg, and 2C packaging PRs).
+~~This phase branch currently records the desktop implementation contract
+only.~~ Implemented per `desktop/plan.md`: `desktop/` is a pnpm workspace
+member; `pnpm-lock.yaml` is regenerated locally as required. Tag-driven
+Windows releases build via `.github/workflows/release-desktop.yml` with
+`electron-builder --publish never`.

@@ -1,0 +1,31 @@
+Audio Splitter — Third-Party Notices
+====================================
+
+This application bundles a full FFmpeg binary via the `ffmpeg-static` npm
+package (https://github.com/eugeneware/ffmpeg-static).
+
+FFmpeg License
+--------------
+FFmpeg is free software licensed under the GNU Lesser General Public License
+(LGPL) version 2.1 or later. However, the binaries distributed by
+ffmpeg-static are built with GPL-licensed components (e.g. libx264,
+libmp3lame encoders), which makes the distributed binary subject to the GNU
+General Public License (GPL) version 3.
+
+  - FFmpeg:  https://ffmpeg.org/legal.html
+  - LGPL:    https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+  - GPL v3:  https://www.gnu.org/licenses/gpl-3.0.html
+  - ffmpeg-static package (MIT):
+    https://github.com/eugeneware/ffmpeg-static/blob/master/LICENSE
+
+FFmpeg source code is available at https://ffmpeg.org/download.html and the
+exact build recipes used for the distributed binaries are documented by the
+ffmpeg-static project.
+
+Electron
+--------
+Chromium + Node.js runtime. License: MIT.
+https://github.com/electron/electron/blob/main/LICENSE
+
+This notice file ships inside the packaged application
+(`files: ["NOTICE"]` in electron-builder config).

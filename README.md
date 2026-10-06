@@ -61,7 +61,21 @@ pnpm deploy:localwp
 
 This builds with `SVELTEKIT_PATHS_BASE=/mp3-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`mp3-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/mp3-splitter/` page containing the `[mp3_splitter]` shortcode; the plugin injects `window.MP3SPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
 
+## Desktop App (Electron)
+`desktop/` is a pnpm workspace member containing the Electron shell. It serves the web build over a loopback HTTP server, exposes a narrow `window.MP3S_DESKTOP` bridge, and splits with the bundled native `ffmpeg` (`ffmpeg-static`) — so large files never enter WASM memory. See `desktop/README.md` and `desktop/plan.md`.
+
+```sh
+pnpm install           # workspace-wide, pulls Electron + FFmpeg binaries
+pnpm build             # web renderer (root-relative paths for loopback)
+pnpm desktop:dev       # run the app
+pnpm desktop:package   # → desktop/dist-release: NSIS installer + portable exe
+pnpm desktop:smoke     # headless end-to-end check (dev or --packaged)
+```
+
+Unsigned builds show a Windows SmartScreen prompt; code signing is a tracked follow-up.
+
 ## Recent Changes
+- **2026-10-06** — feat: Electron desktop app — shell, loopback server, native FFmpeg engine, Windows NSIS+portable packaging (#13)
 - **2026-10-06** — feat: multi-format audio input (WAV/M4A/AAC/OGG/Opus/FLAC/WMA) + match-input export; renamed to Audio Splitter (#34)
 - **2026-10-06** — feat: cursor-anchored wheel zoom + 25–500% dropdown (#33)
 - **2026-10-06** — fix: readable ruler timestamps (#32)
@@ -92,7 +106,8 @@ The local Vite dev server already sets these headers.
 ## Project Files
 - `src/lib/components` contains the UI (PlaybackBar, SplitPointsTable, SplitButton, WaveformDisplay, AudioUploader)
 - `src/lib/stores` contains app state (`splitStore` owns split points and derived segments)
-- `src/lib/media` contains the `MediaSplitEngine` contract and `BrowserFfmpegEngine`
+- `src/lib/media` contains the `MediaSplitEngine` contract, `BrowserFfmpegEngine` (FFmpeg.wasm), and `DesktopFfmpegEngine` (Electron/native)
+- `desktop/` contains the Electron app (main/preload/loopback server/native FFmpeg runner) — a pnpm workspace member
 - `wordpress/mp3-splitter-v1` contains the WordPress plugin wrapper for LocalWP deploys
 - `docs/phases` documents the phased refactor (00 → 02)
 - `.github/workflows/ci.yml` runs the release checks
