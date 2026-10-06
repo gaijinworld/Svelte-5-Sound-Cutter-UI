@@ -132,7 +132,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="min-h-screen overflow-x-hidden bg-[#ececec] text-gray-900">
+<div class="min-h-screen overflow-x-hidden bg-gradient-to-b from-[#eef0f4] to-[#e4e6eb] text-gray-900">
 	<header class="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-gray-300 bg-white px-3 py-2 shadow-sm sm:px-4">
 		<div class="flex min-w-0 items-center gap-3">
 			<div class="text-xl" aria-hidden="true">🎵</div>
@@ -158,9 +158,9 @@
 			class="workspace-grid grid min-h-[calc(100vh-4rem)] grid-cols-1"
 			style={`--pane-h: ${paneHeight !== null ? `${paneHeight}px` : 'calc(100vh - 4rem)'}; --sbw: ${sidebarWidth}px`}
 		>
-			<section class="flex min-h-[440px] min-w-0 flex-col border-gray-300 bg-[#efefef] lg:min-h-0">
+			<section class="flex min-h-[440px] min-w-0 flex-col border-gray-300 bg-gradient-to-b from-slate-100 to-slate-200/60 lg:min-h-0">
 				<div class="min-h-0 flex-1 p-2 sm:p-4">
-					<div class="h-full min-h-[300px] rounded border border-gray-300 bg-white p-2 shadow-inner">
+					<div class="h-full min-h-[300px] rounded-xl bg-white p-3 shadow-md ring-1 ring-black/5">
 						<WaveformDisplay bind:this={waveformDisplay} />
 					</div>
 				</div>
@@ -191,11 +191,11 @@
 				onpointerdown={(event) => startPaneResize('width', event)}
 			></div>
 
-			<aside class="flex min-h-[360px] min-w-0 flex-col border-t border-gray-300 bg-white lg:min-h-0 lg:border-t-0">
+			<aside class="flex min-h-[360px] min-w-0 flex-col border-t border-gray-300 bg-slate-50 lg:min-h-0 lg:border-t-0">
 				<div class="min-h-0 flex-1">
 					<SplitPointsTable />
 				</div>
-				<div class="border-t border-gray-300 p-3">
+				<div class="border-t border-gray-200 bg-white p-3 shadow-[0_-1px_3px_rgba(0,0,0,0.04)]">
 					<SplitButton />
 				</div>
 			</aside>

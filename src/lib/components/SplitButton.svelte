@@ -137,33 +137,38 @@
 </script>
 
 <div class="space-y-3">
-	<fieldset class="rounded border border-gray-200 bg-gray-50 p-2" disabled={isSplitting}>
-		<legend class="px-1 text-[11px] font-semibold text-gray-600">Splitting mode</legend>
-		<label class="flex cursor-pointer items-start gap-2 py-1 text-xs">
+	<fieldset
+		class="rounded-xl border border-gray-200 bg-gradient-to-b from-white to-slate-50 p-3 shadow-sm"
+		disabled={isSplitting}
+	>
+		<legend class="px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Splitting mode</legend>
+		<label class="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1.5 text-xs transition-colors hover:bg-blue-50/70">
 			<input
 				type="radio"
+				class="mt-0.5 accent-blue-600"
 				name="split-mode"
 				value="lossless"
 				checked={mode === 'lossless'}
 				onchange={() => (mode = 'lossless')}
 			/>
-			<span><strong>Fast / Lossless</strong> — copies the original audio stream with no quality loss.</span>
+			<span><strong class="text-gray-800">Fast / Lossless</strong> — copies the original audio stream with no quality loss.</span>
 		</label>
-		<label class="flex cursor-pointer items-start gap-2 py-1 text-xs">
+		<label class="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1.5 text-xs transition-colors hover:bg-blue-50/70">
 			<input
 				type="radio"
+				class="mt-0.5 accent-blue-600"
 				name="split-mode"
 				value="precise"
 				checked={mode === 'precise'}
 				onchange={() => (mode = 'precise')}
 			/>
-			<span><strong>Precise</strong> — re-encodes to the same format for tighter requested boundaries.</span>
+			<span><strong class="text-gray-800">Precise</strong> — re-encodes to the same format for tighter requested boundaries.</span>
 		</label>
 	</fieldset>
 
 	<div class="flex gap-2">
 		<button
-			class="flex flex-1 items-center justify-center gap-2 rounded border border-gray-400 bg-[#f5f5f5] px-3 py-2 text-sm font-medium text-gray-800 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+			class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
 			onclick={startSplitting}
 			disabled={!audioStore.file || selectedCount === 0 || isSplitting}
 		>
@@ -173,7 +178,7 @@
 
 		{#if isSplitting}
 			<button
-				class="rounded border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+				class="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
 				onclick={cancelSplitting}
 			>
 				Cancel
@@ -183,8 +188,11 @@
 
 	{#if isSplitting || progress > 0}
 		<div class="space-y-1">
-			<div class="h-2 overflow-hidden rounded bg-gray-200">
-				<div class="h-full bg-blue-600 transition-all" style={`width: ${progress}%`}></div>
+			<div class="h-2.5 overflow-hidden rounded-full bg-gray-200 shadow-inner">
+				<div
+					class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
+					style={`width: ${progress}%`}
+				></div>
 			</div>
 			<div class="flex justify-between gap-2 text-[11px] text-gray-500">
 				<span class="truncate" title={currentPart}>{statusMessage ?? ''}</span>
@@ -196,12 +204,12 @@
 	{/if}
 
 	{#if results.length > 0}
-		<div class="rounded border border-green-200 bg-green-50 p-2">
+		<div class="rounded-lg border border-green-200 bg-green-50 p-2.5 shadow-sm">
 			<div class="mb-2 flex items-center justify-between gap-2">
 				<div class="text-xs font-semibold text-green-900">Audio parts ready</div>
 				{#if results.length > 1}
 					<button
-						class="rounded border border-green-300 bg-white px-2 py-1 text-[11px] font-medium text-green-800 hover:bg-green-100 disabled:opacity-50"
+						class="rounded-md bg-green-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-green-500 disabled:opacity-50"
 						onclick={downloadZip}
 						disabled={isPreparingZip}
 					>
