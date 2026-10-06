@@ -6,6 +6,7 @@
 	import WaveformDisplay from '$lib/components/WaveformDisplay.svelte';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { VISIBLE_VERSION } from '$lib/version';
 
 	let waveformDisplay: WaveformDisplay;
 
@@ -66,7 +67,7 @@
 </script>
 
 <svelte:head>
-	<title>Gaijin World MP3 Splitter</title>
+	<title>MP3 Splitter App v{VISIBLE_VERSION} Live</title>
 	<meta
 		name="description"
 		content="Split MP3 files locally in your browser using waveform split points."
@@ -80,7 +81,12 @@
 		<div class="flex min-w-0 items-center gap-3">
 			<div class="text-xl" aria-hidden="true">🎵</div>
 			<div class="min-w-0">
-				<h1 class="truncate text-sm font-semibold leading-tight sm:text-base">Gaijin World MP3 Splitter</h1>
+				<h1 class="truncate text-sm font-semibold leading-tight sm:text-base">
+					Gaijin World MP3 Splitter<span
+						class="ml-2 inline-block rounded bg-gray-100 px-1.5 py-0.5 align-middle font-mono text-[10px] font-normal text-gray-500"
+						>v{VISIBLE_VERSION}</span
+					>
+				</h1>
 				<p class="hidden text-xs text-gray-500 sm:block">Local browser splitting — no server upload</p>
 			</div>
 		</div>

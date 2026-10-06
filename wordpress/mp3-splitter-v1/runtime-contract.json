@@ -1,0 +1,13 @@
+{
+  "visibleVersion": "2026.10.06.01",
+  "buildDate": "2026-10-06",
+  "appName": "MP3 Splitter",
+  "upstreams": {
+    "app": {
+      "repository": "https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI",
+      "upstream": "https://github.com/flashfork/Svelte-5-Sound-Cutter-UI",
+      "framework": "SvelteKit 2 / Svelte 5 (SPA, adapter-static)",
+      "ffmpeg": "@ffmpeg/ffmpeg 0.12.x (FFmpeg.wasm, CDN core)"
+    }
+  }
+}
