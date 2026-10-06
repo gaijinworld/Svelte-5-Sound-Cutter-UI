@@ -1,7 +1,7 @@
 import type { FFmpeg } from '@ffmpeg/ffmpeg';
 import { loadFfmpeg, resetFfmpeg } from '$lib/audio/ffmpegClient';
 import type { SplitSegment } from '$lib/types';
-import type { MediaSplitEngine, SplitResult } from './types';
+import type { MediaSplitEngine, SplitOptions, SplitResult } from './types';
 
 export class BrowserFfmpegEngine implements MediaSplitEngine {
 	private ffmpeg: FFmpeg | null = null;
@@ -16,13 +16,18 @@ export class BrowserFfmpegEngine implements MediaSplitEngine {
 		await this.ffmpeg.writeFile(this.inputName, inputData);
 	}
 
-	async split(segment: SplitSegment, outputName: string): Promise<SplitResult> {
+	async split(
+		segment: SplitSegment,
+		outputName: string,
+		options: SplitOptions = {}
+	): Promise<SplitResult> {
 		if (!this.ffmpeg || !this.inputName) {
 			throw new Error('Splitter engine is not prepared.');
 		}
 
 		const start = Math.max(0, segment.start).toFixed(3);
 		const duration = Math.max(0, segment.duration).toFixed(3);
+		const mode = options.mode ?? 'lossless';
 
 		try {
 			await this.ffmpeg.deleteFile(outputName);
@@ -30,7 +35,7 @@ export class BrowserFfmpegEngine implements MediaSplitEngine {
 			// Output does not exist yet.
 		}
 
-		await this.ffmpeg.exec([
+		const common = [
 			'-ss',
 			start,
 			'-i',
@@ -38,14 +43,15 @@ export class BrowserFfmpegEngine implements MediaSplitEngine {
 			'-t',
 			duration,
 			'-map',
-			'0:a:0',
-			'-c:a',
-			'copy',
-			'-avoid_negative_ts',
-			'make_zero',
-			'-y',
-			outputName
-		]);
+			'0:a:0'
+		];
+
+		const encoding =
+			mode === 'precise'
+				? ['-c:a', 'libmp3lame', '-q:a', '2']
+				: ['-c:a', 'copy', '-avoid_negative_ts', 'make_zero'];
+
+		await this.ffmpeg.exec([...common, ...encoding, '-y', outputName]);
 
 		const data = (await this.ffmpeg.readFile(outputName)) as Uint8Array;
 		const blob = new Blob([Uint8Array.from(data)], { type: 'audio/mpeg' });
