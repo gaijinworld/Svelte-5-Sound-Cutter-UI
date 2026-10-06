@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import WaveSurfer from 'wavesurfer.js';
+	import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.js';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
 	import { formatTimecode, parseTimecode } from '$lib/utils/time';
@@ -11,6 +12,8 @@
 	let isLoading = $state(false);
 	let errorMessage = $state<string | null>(null);
 	let zoomLevel = $state(1);
+	let showTopRuler = $state(false);
+	let showBottomRuler = $state(false);
 
 	const MIN_ZOOM = 1;
 	const MAX_ZOOM = 500;
@@ -88,6 +91,37 @@
 			input.value = formatTimecode(selectedPoint.time);
 		}
 	}
+
+	// Timestamp rulers — independent top/bottom TimelinePlugin instances,
+	// recreated whenever the toggles or the wavesurfer instance change.
+	$effect(() => {
+		const ws = wavesurfer;
+		if (!ws) return;
+		const top = showTopRuler
+			? ws.registerPlugin(
+					TimelinePlugin.create({
+						insertPosition: 'beforebegin',
+						height: 20,
+						formatTimeCallback: formatTimecode,
+						style: { fontSize: '10px', color: '#4b5563' }
+					})
+				)
+			: null;
+		const bottom = showBottomRuler
+			? ws.registerPlugin(
+					TimelinePlugin.create({
+						insertPosition: 'afterend',
+						height: 20,
+						formatTimeCallback: formatTimecode,
+						style: { fontSize: '10px', color: '#4b5563' }
+					})
+				)
+			: null;
+		return () => {
+			top?.destroy();
+			bottom?.destroy();
+		};
+	});
 
 	$effect(() => {
 		const objectUrl = audioStore.objectUrl;
@@ -186,9 +220,17 @@
 		{/if}
 	</div>
 
-	<div class="mt-2 flex items-center justify-between border-t border-gray-200 pt-2 text-xs text-gray-500">
+	<div class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-gray-200 pt-2 text-xs text-gray-500">
 		<span class="font-mono">{formatTimecode(audioStore.currentTime)}</span>
-		<div class="flex items-center gap-3">
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+			<label class="flex cursor-pointer items-center gap-1 select-none">
+				<input type="checkbox" class="accent-blue-600" bind:checked={showTopRuler} />
+				Top ruler
+			</label>
+			<label class="flex cursor-pointer items-center gap-1 select-none">
+				<input type="checkbox" class="accent-blue-600" bind:checked={showBottomRuler} />
+				Bottom ruler
+			</label>
 			<span>{zoomLevel > 1 ? `${Math.round(zoomLevel)}× zoom` : 'Scroll to zoom'}</span>
 			{#if zoomLevel > 1}
 				<button class="text-blue-700 hover:underline" onclick={() => zoom(1)}>Reset zoom</button>
