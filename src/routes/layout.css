@@ -1,1 +1,21 @@
 @import 'tailwindcss';
+
+/*
+ * WordPress themes (e.g. Blocksy) ship an unlayered `.hidden{display:none}`
+ * rule that beats Tailwind's `@layer utilities` copy — so `hidden sm:block`
+ * style toggles never un-hide when embedded. These collision-free classes
+ * are unlayered author styles that replace those combos.
+ */
+.mp3s-hide {
+	display: none;
+}
+@media (min-width: 640px) {
+	.mp3s-show-sm {
+		display: block;
+	}
+}
+@media (min-width: 1024px) {
+	.mp3s-show-lg {
+		display: block;
+	}
+}

@@ -120,7 +120,7 @@
 						>v{VISIBLE_VERSION}</span
 					>
 				</h1>
-				<p class="hidden text-xs text-gray-500 sm:block">Local browser splitting — no server upload</p>
+				<p class="mp3s-hide mp3s-show-sm text-xs text-gray-500">Local browser splitting — no server upload</p>
 			</div>
 		</div>
 
@@ -164,7 +164,7 @@
 				aria-orientation="vertical"
 				aria-label="Drag to resize split-points panel width"
 				title="Drag to resize panel width"
-				class="hidden cursor-col-resize touch-none bg-gray-300 transition-colors hover:bg-blue-500/70 lg:block"
+				class="mp3s-hide mp3s-show-lg cursor-col-resize touch-none bg-gray-300 transition-colors hover:bg-blue-500/70"
 				onpointerdown={(event) => startPaneResize('width', event)}
 			></div>
 
