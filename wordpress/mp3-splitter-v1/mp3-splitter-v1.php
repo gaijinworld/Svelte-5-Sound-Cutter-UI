@@ -34,6 +34,7 @@ final class MP3S_Plugin {
     private function __construct() {
         add_shortcode(MP3S_SHORTCODE, [$this, 'render_shortcode']);
         add_filter('document_title_parts', [$this, 'filter_document_title']);
+        add_filter('autoptimize_filter_js_exclude', [$this, 'filter_autoptimize_js_exclude']);
     }
 
     /**
@@ -73,12 +74,24 @@ final class MP3S_Plugin {
         ]);
     }
 
+    /**
+     * Autoptimize exclusion keyed on our script payloads — a fallback in case
+     * the <!--noptimize--> markers ever get stripped by another filter. The
+     * inline SvelteKit boot script uses document.currentScript.parentElement
+     * to find its mount point, so it must not be moved or rewritten to a
+     * data: URI.
+     */
+    public function filter_autoptimize_js_exclude(string $exclude): string {
+        return $exclude . ',__sveltekit,MP3SPLITTER_RUNTIME_CONFIG';
+    }
+
     public function render_shortcode(): string {
         $markup = $this->get_app_markup();
         if ($markup === null) {
             return '<div class="mp3s-build-error" role="alert">MP3 Splitter is temporarily unavailable because its application assets are missing. Deploy the production frontend build or contact the site administrator.</div>';
         }
-        return $this->get_runtime_config_tag() . "\n" . $markup;
+        // <!--noptimize--> tells Autoptimize to leave this whole block alone.
+        return "<!--noptimize-->\n" . $this->get_runtime_config_tag() . "\n" . $markup . "\n<!--/noptimize-->";
     }
 
     private function get_runtime_config(): array {
@@ -110,9 +123,11 @@ final class MP3S_Plugin {
         $html = (string) file_get_contents($index_path);
 
         if (preg_match('/<head[^>]*>(.*)<\/head>\s*<body[^>]*>(.*)<\/body>/is', $html, $m)) {
-            // Strip tags that belong in a document <head> only — they are
-            // invalid/duplicated when inlined into a WP page body.
-            $head = preg_replace('/<(title|meta)\b[^>]*>(<\/title>)?/is', '', $m[1]);
+            // Strip tags that belong in a document <head> only — including
+            // <title>'s text content, which would otherwise leak into the page
+            // body as stray visible text.
+            $head = preg_replace('/<title\b[^>]*>.*?<\/title>/is', '', $m[1]);
+            $head = preg_replace('/<meta\b[^>]*\/?>/is', '', (string) $head);
             return $head . "\n" . $m[2];
         }
         return $html;

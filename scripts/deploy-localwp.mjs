@@ -21,8 +21,13 @@ const publicDir =
 const pluginDest = join(publicDir, 'wp-content', 'plugins', 'mp3-splitter-v1');
 const distDest = join(pluginDest, 'assets', 'dist');
 
-// URL the built assets are served from — must match plugin_dest/assets/dist.
-const pathsBase = '/wp-content/plugins/mp3-splitter-v1/assets/dist';
+// WP page path the SPA is embedded on — the client router matches
+// location.pathname against paths.base. Must equal MP3S_PAGE_SLUG.
+const pathsBase = '/mp3-splitter';
+// Absolute URL the built assets are served from — must match
+// plugin_dest/assets/dist. SvelteKit requires paths.assets to be absolute.
+const siteOrigin = process.env.MP3S_SITE_ORIGIN ?? 'https://gaijinworld-local.local';
+const pathsAssets = `${siteOrigin}/wp-content/plugins/mp3-splitter-v1/assets/dist`;
 
 if (!existsSync(publicDir)) {
 	console.error(`LocalWP public dir not found: ${publicDir}`);
@@ -30,12 +35,12 @@ if (!existsSync(publicDir)) {
 	process.exit(1);
 }
 
-console.log(`1/3 Building SPA (SVELTEKIT_PATHS_BASE=${pathsBase}) ...`);
+console.log(`1/3 Building SPA (base=${pathsBase}, assets=${pathsAssets}) ...`);
 const build = spawnSync('pnpm', ['build'], {
 	cwd: repoRoot,
 	stdio: 'inherit',
 	shell: true,
-	env: { ...process.env, SVELTEKIT_PATHS_BASE: pathsBase }
+	env: { ...process.env, SVELTEKIT_PATHS_BASE: pathsBase, SVELTEKIT_PATHS_ASSETS: pathsAssets }
 });
 if (build.status !== 0) process.exit(build.status ?? 1);
 
