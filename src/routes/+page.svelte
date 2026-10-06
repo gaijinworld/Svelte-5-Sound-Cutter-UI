@@ -6,6 +6,7 @@
 	import WaveformDisplay from '$lib/components/WaveformDisplay.svelte';
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { findAdjacentPoint } from '$lib/utils/splits';
 	import { VISIBLE_VERSION } from '$lib/version';
 
 	let waveformDisplay = $state<WaveformDisplay | undefined>(undefined);
@@ -95,6 +96,28 @@
 				event.preventDefault();
 				handleSeek(audioStore.currentTime + (event.shiftKey ? 1 : 0.1));
 				break;
+			case 'Home':
+				event.preventDefault();
+				handleSeek(0);
+				break;
+			case 'End':
+				event.preventDefault();
+				handleSeek(audioStore.duration);
+				break;
+			case 'Comma':
+			case 'Period': {
+				const point = findAdjacentPoint(
+					splitStore.points,
+					audioStore.currentTime,
+					event.code === 'Comma' ? -1 : 1
+				);
+				if (point) {
+					event.preventDefault();
+					handleSeek(point.time);
+					splitStore.selectPoint(point.id);
+				}
+				break;
+			}
 		}
 	}
 </script>

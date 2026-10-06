@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { audioStore } from '$lib/stores/audioStore.svelte';
 	import { splitStore } from '$lib/stores/splitStore.svelte';
+	import { findAdjacentPoint } from '$lib/utils/splits';
 	import { formatTimecode, parseTimecode } from '$lib/utils/time';
 
 	interface Props {
@@ -13,6 +14,15 @@
 	let { onPlay, onPause, onStop, onSeek }: Props = $props();
 	let timeText = $state('0:00:00.000');
 	let editingTime = $state(false);
+
+	let prevPoint = $derived(findAdjacentPoint(splitStore.points, audioStore.currentTime, -1));
+	let nextPoint = $derived(findAdjacentPoint(splitStore.points, audioStore.currentTime, 1));
+
+	function jumpToPoint(point: { id: string; time: number } | null) {
+		if (!point) return;
+		onSeek(point.time);
+		splitStore.selectPoint(point.id);
+	}
 
 	$effect(() => {
 		if (!editingTime) timeText = formatTimecode(audioStore.currentTime);
@@ -61,6 +71,41 @@
 		>
 			■
 		</button>
+
+		<div class="flex items-center gap-0.5" role="group" aria-label="Snap navigation">
+			<button
+				class="flex h-8 w-8 items-center justify-center rounded border border-gray-400 bg-white text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+				onclick={() => onSeek(0)}
+				disabled={audioStore.duration <= 0}
+				title="Jump to start (Home)"
+			>
+				⏮
+			</button>
+			<button
+				class="flex h-8 w-8 items-center justify-center rounded border border-gray-400 bg-white text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+				onclick={() => jumpToPoint(prevPoint)}
+				disabled={!prevPoint}
+				title="Previous split point (,)"
+			>
+				◄|
+			</button>
+			<button
+				class="flex h-8 w-8 items-center justify-center rounded border border-gray-400 bg-white text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+				onclick={() => jumpToPoint(nextPoint)}
+				disabled={!nextPoint}
+				title="Next split point (.)"
+			>
+				|►
+			</button>
+			<button
+				class="flex h-8 w-8 items-center justify-center rounded border border-gray-400 bg-white text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+				onclick={() => onSeek(audioStore.duration)}
+				disabled={audioStore.duration <= 0}
+				title="Jump to end (End)"
+			>
+				⏭
+			</button>
+		</div>
 
 		<label class="ml-1 font-medium" for="playhead-time">Time:</label>
 		<input
