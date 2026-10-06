@@ -11,7 +11,8 @@
 	let isReady = $state(false);
 	let isLoading = $state(false);
 	let errorMessage = $state<string | null>(null);
-	let zoomLevel = $state(1);
+	let zoomPercent = $state(100);
+	let zoomSelect = $state('100');
 	let showTopRuler = $state(false);
 	let showBottomRuler = $state(false);
 
@@ -29,9 +30,16 @@
 		contentWidth > 0 ? Math.min(100 - thumbWidthPct, (scrollLeft / contentWidth) * 100) : 0
 	);
 
-	const MIN_ZOOM = 1;
-	const MAX_ZOOM = 500;
+	const MIN_ZOOM_PCT = 25;
+	const MAX_ZOOM_PCT = 500;
+	const MAX_PX_PER_SEC = 500;
+	const WHEEL_ZOOM_STEP = 1.4;
+	const ZOOM_PRESETS = [25, 50, 75, 100, 150, 200, 300, 400, 500];
 	const DEFAULT_SAMPLE_RATE = 44_100;
+
+	// Set right after a wheel zoom so the content fraction under the cursor
+	// stays put; consumed on the next redrawcomplete.
+	let pendingAnchor: { frac: number; x: number } | null = null;
 
 	let selectedPoint = $derived(
 		splitStore.points.find((point) => point.id === splitStore.selectedPointId) ?? null
@@ -52,6 +60,9 @@
 			barRadius: 1,
 			normalize: true,
 			minPxPerSec: 1,
+			// Disabled so zoom percentages below 100% can render the wave
+			// narrower than the pane; 100% is applied explicitly on ready.
+			fillParent: false,
 			hideScrollbar: true,
 			sampleRate: DEFAULT_SAMPLE_RATE
 		});
@@ -63,13 +74,26 @@
 			audioStore.setBuffer(wavesurfer?.getDecodedData() ?? null);
 			audioStore.setCurrentTime(0);
 			syncScrollMetrics();
+			applyZoomPercent(100);
 		});
 
 		wavesurfer.on('scroll', () => {
 			scrollLeft = wavesurfer?.getScroll() ?? 0;
 		});
-		wavesurfer.on('redrawcomplete', syncScrollMetrics);
-		wavesurfer.on('resize', syncScrollMetrics);
+		wavesurfer.on('redrawcomplete', () => {
+			syncScrollMetrics();
+			if (pendingAnchor && wavesurfer) {
+				const { frac, x } = pendingAnchor;
+				pendingAnchor = null;
+				wavesurfer.setScroll(frac * contentWidth - x);
+			}
+		});
+		wavesurfer.on('resize', () => {
+			syncScrollMetrics();
+			// Keep the selected zoom proportion when the pane resizes
+			// (100% always re-fits the file to the new width).
+			applyZoomPercent(zoomPercent);
+		});
 
 		wavesurfer.on('loading', () => {
 			isLoading = true;
@@ -87,16 +111,32 @@
 		});
 	}
 
+	function fitPxPerSec(): number {
+		return viewportWidth > 0 && audioStore.duration > 0
+			? viewportWidth / audioStore.duration
+			: 1;
+	}
+
+	function applyZoomPercent(percent: number) {
+		if (!wavesurfer) return;
+		zoomPercent = Math.max(MIN_ZOOM_PCT, Math.min(MAX_ZOOM_PCT, percent));
+		zoomSelect = String(Math.round(zoomPercent));
+		wavesurfer.zoom(
+			Math.max(0.5, Math.min(MAX_PX_PER_SEC, (fitPxPerSec() * zoomPercent) / 100))
+		);
+	}
+
 	function handleWheel(event: WheelEvent) {
-		if (!wavesurfer || !isReady) return;
+		if (!wavesurfer || !isReady || !container) return;
 		event.preventDefault();
 
-		const factor = event.deltaY < 0 ? 1.2 : 0.8;
-		const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel * factor));
-		if (next === zoomLevel) return;
+		// Anchor the zoom at the cursor: record the content fraction under
+		// the pointer so it stays stationary through the redraw.
+		const rect = container.getBoundingClientRect();
+		const mouseX = event.clientX - rect.left;
+		pendingAnchor = { frac: (scrollLeft + mouseX) / Math.max(1, contentWidth), x: mouseX };
 
-		zoomLevel = next;
-		wavesurfer.zoom(zoomLevel);
+		applyZoomPercent(zoomPercent * (event.deltaY < 0 ? WHEEL_ZOOM_STEP : 1 / WHEEL_ZOOM_STEP));
 	}
 
 	// Markers live in an overlay over the *visible* part of the waveform, so
@@ -210,7 +250,9 @@
 		isLoading = true;
 		isReady = false;
 		errorMessage = null;
-		zoomLevel = 1;
+		zoomPercent = 100;
+		zoomSelect = '100';
+		pendingAnchor = null;
 		splitStore.selectPoint(null);
 		ws.load(objectUrl);
 	});
@@ -241,10 +283,6 @@
 		audioStore.setCurrentTime(safeTime);
 	}
 
-	export function zoom(level: number) {
-		zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
-		wavesurfer?.zoom(zoomLevel);
-	}
 </script>
 
 <div class="relative flex h-full min-h-[330px] flex-col bg-white">
@@ -335,9 +373,24 @@
 				<input type="checkbox" class="accent-blue-600" bind:checked={showBottomRuler} />
 				Bottom ruler
 			</label>
-			<span>{zoomLevel > 1 ? `${Math.round(zoomLevel)}× zoom` : 'Scroll to zoom'}</span>
-			{#if zoomLevel > 1}
-				<button class="text-blue-700 hover:underline" onclick={() => zoom(1)}>Reset zoom</button>
+			<label class="flex items-center gap-1 select-none">
+				Zoom
+				<select
+					class="rounded border border-gray-300 bg-white px-1.5 py-0.5 font-mono text-gray-700"
+					bind:value={zoomSelect}
+					onchange={(event) => applyZoomPercent(Number(event.currentTarget.value))}
+					aria-label="Zoom level (100% = fit file to pane)"
+				>
+					{#each ZOOM_PRESETS as preset (preset)}
+						<option value={String(preset)}>{preset}%</option>
+					{/each}
+					{#if !ZOOM_PRESETS.includes(Math.round(zoomPercent))}
+						<option value={String(Math.round(zoomPercent))}>{Math.round(zoomPercent)}%</option>
+					{/if}
+				</select>
+			</label>
+			{#if Math.round(zoomPercent) !== 100}
+				<button class="text-blue-700 hover:underline" onclick={() => applyZoomPercent(100)}>Fit</button>
 			{/if}
 		</div>
 		<span class="font-mono">{formatTimecode(audioStore.duration)}</span>
