@@ -36,7 +36,6 @@
 		"@ffmpeg/ffmpeg": "^0.12.15",
 		"@ffmpeg/util": "^0.12.2",
 		"fflate": "^0.8.2",
-		"tone": "^15.1.22",
 		"wavesurfer.js": "^7.12.1"
 	}
 }
