@@ -12,9 +12,11 @@ const config = {
 		// embeds via shortcode. See wordpress/mp3-splitter-v1/.
 		adapter: adapter({ fallback: 'index.html' }),
 		paths: {
-			// Deploy builds set SVELTEKIT_PATHS_BASE to the plugin asset URL so
-			// module scripts/imports resolve under wp-content/plugins/...
-			base: process.env.SVELTEKIT_PATHS_BASE ?? ''
+			// Deploy builds set SVELTEKIT_PATHS_BASE to the WP page path (the
+			// client router matches location.pathname against it) and
+			// SVELTEKIT_PATHS_ASSETS to the plugin dist URL (emitted asset URLs).
+			base: process.env.SVELTEKIT_PATHS_BASE ?? '',
+			assets: process.env.SVELTEKIT_PATHS_ASSETS ?? ''
 		}
 	}
 };
