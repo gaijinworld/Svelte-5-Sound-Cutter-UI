@@ -16,6 +16,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
@@ -29,6 +30,9 @@ const pathsBase = '/audio-splitter';
 // Production origin — baked into emitted asset URLs.
 const siteOrigin = (process.env.AUDS_SITE_ORIGIN ?? 'https://www.gaijinworld.com').replace(/\/$/, '');
 const pathsAssets = `${siteOrigin}/wp-content/plugins/audio-splitter-v1/assets/dist`;
+// Self-hosted FFmpeg.wasm core — bundled inside the zip so production never
+// depends on the unpkg CDN.
+const ffmpegCoreBaseUrl = `${pathsAssets}/ffmpeg`;
 
 const outDir = process.env.AUDS_OUT_DIR ?? join(repoRoot, 'output');
 const zipName = process.env.AUDS_ZIP_NAME ?? 'audio-splitter.zip';
@@ -39,7 +43,12 @@ const build = spawnSync('pnpm', ['build'], {
 	cwd: repoRoot,
 	stdio: 'inherit',
 	shell: true,
-	env: { ...process.env, SVELTEKIT_PATHS_BASE: pathsBase, SVELTEKIT_PATHS_ASSETS: pathsAssets }
+	env: {
+		...process.env,
+		SVELTEKIT_PATHS_BASE: pathsBase,
+		SVELTEKIT_PATHS_ASSETS: pathsAssets,
+		VITE_FFMPEG_CORE_BASE_URL: ffmpegCoreBaseUrl
+	}
 });
 if (build.status !== 0) process.exit(build.status ?? 1);
 
@@ -47,6 +56,20 @@ const indexPath = join(buildDir, 'index.html');
 if (!existsSync(indexPath)) {
 	console.error(`Build output missing ${indexPath} — adapter-static misconfigured?`);
 	process.exit(1);
+}
+
+// Stage the self-hosted FFmpeg.wasm core into build/ffmpeg/ so it lands in
+// assets/dist/ffmpeg/ inside the zip.
+const require = createRequire(import.meta.url);
+const coreEsmDir = join(dirname(require.resolve('@ffmpeg/core')), '..', 'esm');
+for (const file of ['ffmpeg-core.js', 'ffmpeg-core.wasm']) {
+	const src = join(coreEsmDir, file);
+	if (!existsSync(src)) {
+		console.error(`FFmpeg core asset missing: ${src} — is @ffmpeg/core installed?`);
+		process.exit(1);
+	}
+	mkdirSync(join(buildDir, 'ffmpeg'), { recursive: true });
+	cpSync(src, join(buildDir, 'ffmpeg', file));
 }
 
 console.log(`2/4 Staging plugin payload ...`);
@@ -70,6 +93,11 @@ const leakedOrigin = indexHtml.match(/https?:\/\/(?!www\.w3\.org)[a-z0-9.-]+/g)?
 );
 if (leakedOrigin) {
 	console.error(`Staged index.html leaks a foreign origin: ${leakedOrigin}`);
+	process.exit(1);
+}
+const wasmStaged = existsSync(join(pluginStage, 'assets', 'dist', 'ffmpeg', 'ffmpeg-core.wasm'));
+if (!wasmStaged) {
+	console.error('ffmpeg-core.wasm missing from staged payload — core copy step failed?');
 	process.exit(1);
 }
 
@@ -97,6 +125,7 @@ const versionMatch = readFileSync(join(pluginSrc, 'audio-splitter-v1.php'), 'utf
 const titleMatch = indexHtml.match(/<title>([^<]*)<\/title>/);
 console.log(`   plugin version : ${versionMatch?.[1] ?? 'NOT FOUND'}`);
 console.log(`   index <title>  : ${titleMatch?.[1] ?? 'NOT FOUND'}`);
+console.log(`   ffmpeg core    : self-hosted (${ffmpegCoreBaseUrl})`);
 console.log(`   zip            : ${zipPath} (${(zipBytes.length / 1024).toFixed(0)} KB)`);
 console.log(`   sha256         : ${sha256}`);
 console.log('Done. Upload via wp-admin -> Plugins -> Add New -> Upload Plugin.');

@@ -4,6 +4,7 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 
 | Package | Version | License | Scope |
 | --- | --- | --- | --- |
+| @ffmpeg/core | 0.12.6 | MIT | development |
 | @ffmpeg/ffmpeg | 0.12.15 | MIT | runtime |
 | @ffmpeg/types | 0.12.4 | MIT | runtime |
 | @ffmpeg/util | 0.12.2 | MIT | runtime |
@@ -13,6 +14,7 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 | @standard-schema/spec | 1.1.0 | MIT | development |
 | @sveltejs/acorn-typescript | 1.0.8 | MIT | development |
 | @sveltejs/adapter-auto | 7.0.0 | MIT | development |
+| @sveltejs/adapter-static | 3.0.10 | MIT | development |
 | @sveltejs/kit | 2.49.2 | MIT | development |
 | @sveltejs/vite-plugin-svelte | 6.2.1 | MIT | development |
 | @sveltejs/vite-plugin-svelte-inspector | 5.0.1 | MIT | development |
@@ -21,6 +23,7 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 | @tailwindcss/vite | 4.1.18 | MIT | development |
 | @types/cookie | 0.6.0 | MIT | development |
 | @types/estree | 1.0.8 | MIT | development |
+| @types/node | 22.20.5 | MIT | development |
 | @vitest/expect | 4.1.2 | MIT | development |
 | @vitest/mocker | 4.1.2 | MIT | development |
 | @vitest/pretty-format | 4.1.2 | MIT | development |
@@ -44,7 +47,6 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 | expect-type | 1.3.0 | Apache-2.0 | development |
 | fdir | 6.5.0 | MIT | development |
 | fflate | 0.8.2 | MIT | runtime |
-| fsevents | 2.3.3 | MIT | development |
 | is-reference | 3.0.3 | MIT | development |
 | jiti | 2.6.1 | MIT | development |
 | kleur | 4.1.5 | MIT | development |
@@ -61,7 +63,6 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 | sade | 1.8.1 | MIT | development |
 | set-cookie-parser | 2.7.2 | MIT | development |
 | sirv | 3.0.2 | MIT | development |
-| standardized-audio-context | 25.3.77 | MIT | runtime |
 | std-env | 4.0.0 | MIT | development |
 | svelte | 5.46.0 | MIT | development |
 | svelte-check | 4.3.5 | MIT | development |
@@ -70,8 +71,6 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 | tinyexec | 1.0.4 | MIT | development |
 | tinyglobby | 0.2.15 | MIT | development |
 | tinyrainbow | 3.1.0 | MIT | development |
-| tone | 15.1.22 | MIT | runtime |
-| tslib | 2.8.1 | 0BSD | runtime |
 | typescript | 5.9.3 | Apache-2.0 | development |
 | vite | 7.3.0 | MIT | development |
 | vitefu | 1.1.1 | MIT | development |
@@ -82,5 +81,8 @@ Generated from the installed dependency graph with `pnpm run licenses:generate`.
 
 ## Runtime-loaded package
 
-The app loads `@ffmpeg/core@0.12.6` from `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm` at runtime.
-That package is distributed under the MIT license and should be treated as a runtime dependency when deploying the app.
+The app loads the `@ffmpeg/core` WebAssembly bundle at runtime. WordPress deploys
+(`deploy:localwp`, `package:wpzip`) self-host it — copied from the `@ffmpeg/core`
+devDependency into `assets/dist/ffmpeg/` — so no third-party CDN is used. Plain
+`pnpm dev`/`pnpm build` fall back to `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm`.
+That package is distributed under the MIT license.

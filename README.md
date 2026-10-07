@@ -20,7 +20,7 @@ Browser-local audio splitter built with SvelteKit (Svelte 5), WaveSurfer.js, and
 ## Privacy and Data Handling
 - Audio processing happens locally in the browser.
 - No server upload flow is built into this app.
-- The FFmpeg core bundle is downloaded on demand from `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm` the first time you split. Override with `VITE_FFMPEG_CORE_BASE_URL` to self-host (see `static/ffmpeg/README.md`; production self-hosting is tracked in issue #12).
+- The FFmpeg.wasm core (`@ffmpeg/core` 0.12.x) is loaded in the browser on first split. WordPress deploys (`pnpm deploy:localwp`, `pnpm package:wpzip`) self-host it — the core files are copied from the `@ffmpeg/core` devDependency into `assets/dist/ffmpeg/` and `VITE_FFMPEG_CORE_BASE_URL` points there, so no third-party CDN is used. Plain `pnpm dev`/`pnpm build` still fall back to `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm` (see `static/ffmpeg/README.md`).
 
 ## Supported Browsers
 - Best supported: current desktop Chromium-based browsers
