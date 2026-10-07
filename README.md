@@ -59,7 +59,15 @@ The app ships as an SPA (`@sveltejs/adapter-static`, `index.html` fallback) embe
 pnpm deploy:localwp
 ```
 
-This builds with `SVELTEKIT_PATHS_BASE=/audio-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`audio-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/audio-splitter/` page containing the `[audio_splitter]` shortcode; the plugin injects `window.AUDIOSPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
+This builds with `SVELTEKIT_PATHS_BASE=/audio-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`audio-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`, origin override `AUDS_SITE_ORIGIN`). Activating the plugin self-installs the `/audio-splitter/` page containing the `[audio_splitter]` shortcode; the plugin injects `window.AUDIOSPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
+
+To package the plugin as a zip for wp-admin upload on a production site:
+
+```sh
+pnpm package:wpzip
+```
+
+This builds the SPA with `AUDS_SITE_ORIGIN` (default `https://www.gaijinworld.com`) baked into the emitted asset URLs — the zip must be built per-origin since SvelteKit requires absolute asset URLs — stages `audio-splitter-v1/` (PHP + `runtime-contract.json` + `assets/dist/`), and writes `output/audio-splitter.zip` with a SHA256 and version check. Upload via wp-admin → Plugins → Add New → Upload Plugin.
 
 ## Desktop App (Electron)
 `desktop/` is a pnpm workspace member containing the Electron shell. It serves the web build over a loopback HTTP server, exposes a narrow `window.MP3S_DESKTOP` bridge, and splits with the bundled native `ffmpeg` (`ffmpeg-static`) — so large files never enter WASM memory. See `desktop/README.md` and `desktop/plan.md`.
@@ -75,6 +83,7 @@ pnpm desktop:smoke     # headless end-to-end check (dev or --packaged)
 Unsigned builds show a Windows SmartScreen prompt; code signing is a tracked follow-up.
 
 ## Recent Changes
+- **2026-10-07** — chore: add `pnpm package:wpzip` production zip packaging (`output/audio-splitter.zip`, per-origin asset URLs); version bump v2026.10.07.02
 - **2026-10-07** — chore: rename WordPress plugin/page to `audio-splitter` (`audio-splitter-v1` plugin, `[audio_splitter]` shortcode, `/audio-splitter/` page, `AUDIOSPLITTER_RUNTIME_CONFIG`); version bump v2026.10.07.01
 - **2026-10-06** — feat: Electron desktop app — shell, loopback server, native FFmpeg engine, Windows NSIS+portable packaging (#13)
 - **2026-10-06** — feat: multi-format audio input (WAV/M4A/AAC/OGG/Opus/FLAC/WMA) + match-input export; renamed to Audio Splitter (#34)

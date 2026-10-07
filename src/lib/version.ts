@@ -1,4 +1,4 @@
-export const APP_VERSION = '2026.10.07.01';
+export const APP_VERSION = '2026.10.07.02';
 export const APP_TITLE = 'Audio Splitter App';
 
 declare global {
