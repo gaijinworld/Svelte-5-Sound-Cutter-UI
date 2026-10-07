@@ -9,6 +9,7 @@
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,6 +29,9 @@ const pathsBase = '/audio-splitter';
 // plugin_dest/assets/dist. SvelteKit requires paths.assets to be absolute.
 const siteOrigin = process.env.AUDS_SITE_ORIGIN ?? 'https://gaijinworld-local.local';
 const pathsAssets = `${siteOrigin}/wp-content/plugins/audio-splitter-v1/assets/dist`;
+// Self-hosted FFmpeg.wasm core — bundled under assets/dist/ffmpeg/ so the
+// deployed app never hits a third-party CDN.
+const ffmpegCoreBaseUrl = `${pathsAssets}/ffmpeg`;
 
 if (!existsSync(publicDir)) {
 	console.error(`LocalWP public dir not found: ${publicDir}`);
@@ -40,13 +44,32 @@ const build = spawnSync('pnpm', ['build'], {
 	cwd: repoRoot,
 	stdio: 'inherit',
 	shell: true,
-	env: { ...process.env, SVELTEKIT_PATHS_BASE: pathsBase, SVELTEKIT_PATHS_ASSETS: pathsAssets }
+	env: {
+		...process.env,
+		SVELTEKIT_PATHS_BASE: pathsBase,
+		SVELTEKIT_PATHS_ASSETS: pathsAssets,
+		VITE_FFMPEG_CORE_BASE_URL: ffmpegCoreBaseUrl
+	}
 });
 if (build.status !== 0) process.exit(build.status ?? 1);
 
 if (!existsSync(join(buildDir, 'index.html'))) {
 	console.error(`Build output missing ${join(buildDir, 'index.html')} — adapter-static misconfigured?`);
 	process.exit(1);
+}
+
+// Stage the self-hosted FFmpeg.wasm core into build/ffmpeg/ so it ships inside
+// assets/dist/ffmpeg/ in the deployed plugin.
+const require = createRequire(import.meta.url);
+const coreEsmDir = join(dirname(require.resolve('@ffmpeg/core')), '..', 'esm');
+for (const file of ['ffmpeg-core.js', 'ffmpeg-core.wasm']) {
+	const src = join(coreEsmDir, file);
+	if (!existsSync(src)) {
+		console.error(`FFmpeg core asset missing: ${src} — is @ffmpeg/core installed?`);
+		process.exit(1);
+	}
+	mkdirSync(join(buildDir, 'ffmpeg'), { recursive: true });
+	cpSync(src, join(buildDir, 'ffmpeg', file));
 }
 
 console.log(`2/3 Copying plugin template -> ${pluginDest}`);

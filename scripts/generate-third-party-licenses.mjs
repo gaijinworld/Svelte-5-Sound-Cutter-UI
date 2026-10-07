@@ -7,7 +7,8 @@ const outputPath = path.join(repoRoot, 'THIRD_PARTY_LICENSES.md');
 
 const rawTree = execFileSync('pnpm', ['ls', '--json', '--depth', '1'], {
 	cwd: repoRoot,
-	encoding: 'utf8'
+	encoding: 'utf8',
+	shell: process.platform === 'win32'
 });
 
 const [root] = JSON.parse(rawTree);
@@ -58,8 +59,11 @@ const rows = [...packages.values()]
 const ffmpegCoreNotice = [
 	'## Runtime-loaded package',
 	'',
-	'The app loads `@ffmpeg/core@0.12.6` from `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm` at runtime.',
-	'That package is distributed under the MIT license and should be treated as a runtime dependency when deploying the app.',
+	'The app loads the `@ffmpeg/core` WebAssembly bundle at runtime. WordPress deploys',
+	'(`deploy:localwp`, `package:wpzip`) self-host it — copied from the `@ffmpeg/core`',
+	'devDependency into `assets/dist/ffmpeg/` — so no third-party CDN is used. Plain',
+	'`pnpm dev`/`pnpm build` fall back to `https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm`.',
+	'That package is distributed under the MIT license.',
 	''
 ].join('\n');
 
