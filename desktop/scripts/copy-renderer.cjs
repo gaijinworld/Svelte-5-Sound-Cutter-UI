@@ -3,7 +3,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 // The desktop renderer must be the root-relative web build — the WP deploy
-// variant (SVELTEKIT_PATHS_BASE=/mp3-splitter + plugin asset URLs) would 404
+// variant (SVELTEKIT_PATHS_BASE=/audio-splitter + plugin asset URLs) would 404
 // inside the app. So this script rebuilds the web app itself with those env
 // vars cleared, then copies ../build → dist/renderer. MP3S_SKIP_WEB_BUILD=1
 // skips the rebuild when build/ is already the desktop variant.
@@ -29,7 +29,7 @@ if (!fs.existsSync(sourceDir) || !fs.existsSync(path.join(sourceDir, 'index.html
 
 // Guard against copying a WP-pathed build by accident.
 const index = fs.readFileSync(path.join(sourceDir, 'index.html'), 'utf8');
-if (index.includes('wp-content/plugins/mp3-splitter-v1') || index.includes('/mp3-splitter/')) {
+if (index.includes('wp-content/plugins/audio-splitter-v1') || index.includes('/audio-splitter/')) {
 	console.error('❌ build/ contains the WordPress variant (wp-content asset URLs).');
 	console.error('   Rebuild for desktop: pnpm build  (with SVELTEKIT_PATHS_* unset)');
 	process.exit(1);
