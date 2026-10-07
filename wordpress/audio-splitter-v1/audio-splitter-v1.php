@@ -3,7 +3,7 @@
  * Plugin Name: Audio Splitter App (Production V1)
  * Plugin URI: https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI
  * Description: Browser-local audio splitter; ordered split points, lossless/precise FFmpeg.wasm export, batch ZIP download.
- * Version: 2026.10.07.01
+ * Version: 2026.10.07.02
  * Author: GaijinWorld
  * Author URI: https://github.com/gaijinworld
  * License: MIT
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('AUDS_PLUGIN_VERSION', '2026.10.07.01');
+define('AUDS_PLUGIN_VERSION', '2026.10.07.02');
 define('AUDS_PLUGIN_FILE', __FILE__);
 define('AUDS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('AUDS_PLUGIN_URL', plugin_dir_url(__FILE__));
