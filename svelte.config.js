@@ -9,7 +9,7 @@ const config = {
 
 	kit: {
 		// SPA fallback: a single index.html shell that the WordPress plugin
-		// embeds via shortcode. See wordpress/mp3-splitter-v1/.
+		// embeds via shortcode. See wordpress/audio-splitter-v1/.
 		adapter: adapter({ fallback: 'index.html' }),
 		paths: {
 			// Deploy builds set SVELTEKIT_PATHS_BASE to the WP page path (the

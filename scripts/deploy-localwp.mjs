@@ -1,6 +1,6 @@
 /**
  * Builds the SPA for the LocalWP WordPress embed and copies the
- * mp3-splitter-v1 plugin into the Local site's plugins directory.
+ * audio-splitter-v1 plugin into the Local site's plugins directory.
  *
  * Usage:
  *   pnpm deploy:localwp
@@ -12,22 +12,22 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const pluginSrc = join(repoRoot, 'wordpress', 'mp3-splitter-v1');
+const pluginSrc = join(repoRoot, 'wordpress', 'audio-splitter-v1');
 const buildDir = join(repoRoot, 'build');
 
 const publicDir =
 	process.env.LOCALWP_PUBLIC_DIR ??
 	join(process.env.USERPROFILE ?? '', 'Local Sites', 'gaijinworld-local', 'app', 'public');
-const pluginDest = join(publicDir, 'wp-content', 'plugins', 'mp3-splitter-v1');
+const pluginDest = join(publicDir, 'wp-content', 'plugins', 'audio-splitter-v1');
 const distDest = join(pluginDest, 'assets', 'dist');
 
 // WP page path the SPA is embedded on — the client router matches
-// location.pathname against paths.base. Must equal MP3S_PAGE_SLUG.
-const pathsBase = '/mp3-splitter';
+// location.pathname against paths.base. Must equal AUDS_PAGE_SLUG.
+const pathsBase = '/audio-splitter';
 // Absolute URL the built assets are served from — must match
 // plugin_dest/assets/dist. SvelteKit requires paths.assets to be absolute.
-const siteOrigin = process.env.MP3S_SITE_ORIGIN ?? 'https://gaijinworld-local.local';
-const pathsAssets = `${siteOrigin}/wp-content/plugins/mp3-splitter-v1/assets/dist`;
+const siteOrigin = process.env.AUDS_SITE_ORIGIN ?? 'https://gaijinworld-local.local';
+const pathsAssets = `${siteOrigin}/wp-content/plugins/audio-splitter-v1/assets/dist`;
 
 if (!existsSync(publicDir)) {
 	console.error(`LocalWP public dir not found: ${publicDir}`);
@@ -51,7 +51,7 @@ if (!existsSync(join(buildDir, 'index.html'))) {
 
 console.log(`2/3 Copying plugin template -> ${pluginDest}`);
 mkdirSync(pluginDest, { recursive: true });
-for (const file of ['mp3-splitter-v1.php', 'runtime-contract.json']) {
+for (const file of ['audio-splitter-v1.php', 'runtime-contract.json']) {
 	cpSync(join(pluginSrc, file), join(pluginDest, file));
 }
 
@@ -60,4 +60,4 @@ rmSync(distDest, { recursive: true, force: true });
 mkdirSync(distDest, { recursive: true });
 cpSync(buildDir, distDest, { recursive: true });
 
-console.log('Done. Activate "Audio Splitter App (Production V1)" in wp-admin (or via a bootstrap script) — the /mp3-splitter/ page is created on activation.');
+console.log('Done. Activate "Audio Splitter App (Production V1)" in wp-admin (or via a bootstrap script) — the /audio-splitter/ page is created on activation.');

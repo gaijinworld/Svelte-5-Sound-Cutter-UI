@@ -48,18 +48,18 @@ pnpm dev
 
 ## Version and Releases
 - Version format: `YYYY.MM.DD.NN` (date + daily increment), e.g. `2026.10.06.01`.
-- Single source for the displayed version: `src/lib/version.ts` (`APP_VERSION`). The deployed version may be overridden at runtime by `window.MP3SPLITTER_RUNTIME_CONFIG.visibleVersion`, injected by the WordPress plugin.
-- On a release bump, keep in sync: `APP_VERSION` in `src/lib/version.ts`, the `<title>` in `src/app.html`, `MP3S_PLUGIN_VERSION` + the `Version:` header in `wordpress/mp3-splitter-v1/mp3-splitter-v1.php`, and `visibleVersion`/`buildDate` in `wordpress/mp3-splitter-v1/runtime-contract.json`.
+- Single source for the displayed version: `src/lib/version.ts` (`APP_VERSION`). The deployed version may be overridden at runtime by `window.AUDIOSPLITTER_RUNTIME_CONFIG.visibleVersion`, injected by the WordPress plugin.
+- On a release bump, keep in sync: `APP_VERSION` in `src/lib/version.ts`, the `<title>` in `src/app.html`, `AUDS_PLUGIN_VERSION` + the `Version:` header in `wordpress/audio-splitter-v1/audio-splitter-v1.php`, and `visibleVersion`/`buildDate` in `wordpress/audio-splitter-v1/runtime-contract.json`.
 - Bump work happens on `chore/version-bump-<version>` branches.
 
 ## WordPress (LocalWP) Deployment
-The app ships as an SPA (`@sveltejs/adapter-static`, `index.html` fallback) embeddable in WordPress via the `mp3-splitter-v1` plugin in `wordpress/`:
+The app ships as an SPA (`@sveltejs/adapter-static`, `index.html` fallback) embeddable in WordPress via the `audio-splitter-v1` plugin in `wordpress/`:
 
 ```sh
 pnpm deploy:localwp
 ```
 
-This builds with `SVELTEKIT_PATHS_BASE=/mp3-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`mp3-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/mp3-splitter/` page containing the `[mp3_splitter]` shortcode; the plugin injects `window.MP3SPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
+This builds with `SVELTEKIT_PATHS_BASE=/audio-splitter` (page route) and `SVELTEKIT_PATHS_ASSETS` pointing at the plugin's `assets/dist` URL, then copies the plugin (`audio-splitter-v1.php`, `runtime-contract.json`, `assets/dist/`) into the local site at `%USERPROFILE%\Local Sites\gaijinworld-local\app\public` (override with `LOCALWP_PUBLIC_DIR`). Activating the plugin self-installs the `/audio-splitter/` page containing the `[audio_splitter]` shortcode; the plugin injects `window.AUDIOSPLITTER_RUNTIME_CONFIG` (including `visibleVersion`) into the page.
 
 ## Desktop App (Electron)
 `desktop/` is a pnpm workspace member containing the Electron shell. It serves the web build over a loopback HTTP server, exposes a narrow `window.MP3S_DESKTOP` bridge, and splits with the bundled native `ffmpeg` (`ffmpeg-static`) — so large files never enter WASM memory. See `desktop/README.md` and `desktop/plan.md`.
@@ -75,6 +75,7 @@ pnpm desktop:smoke     # headless end-to-end check (dev or --packaged)
 Unsigned builds show a Windows SmartScreen prompt; code signing is a tracked follow-up.
 
 ## Recent Changes
+- **2026-10-07** — chore: rename WordPress plugin/page to `audio-splitter` (`audio-splitter-v1` plugin, `[audio_splitter]` shortcode, `/audio-splitter/` page, `AUDIOSPLITTER_RUNTIME_CONFIG`); version bump v2026.10.07.01
 - **2026-10-06** — feat: Electron desktop app — shell, loopback server, native FFmpeg engine, Windows NSIS+portable packaging (#13)
 - **2026-10-06** — feat: multi-format audio input (WAV/M4A/AAC/OGG/Opus/FLAC/WMA) + match-input export; renamed to Audio Splitter (#34)
 - **2026-10-06** — feat: cursor-anchored wheel zoom + 25–500% dropdown (#33)
@@ -108,7 +109,7 @@ The local Vite dev server already sets these headers.
 - `src/lib/stores` contains app state (`splitStore` owns split points and derived segments)
 - `src/lib/media` contains the `MediaSplitEngine` contract, `BrowserFfmpegEngine` (FFmpeg.wasm), and `DesktopFfmpegEngine` (Electron/native)
 - `desktop/` contains the Electron app (main/preload/loopback server/native FFmpeg runner) — a pnpm workspace member
-- `wordpress/mp3-splitter-v1` contains the WordPress plugin wrapper for LocalWP deploys
+- `wordpress/audio-splitter-v1` contains the WordPress plugin wrapper for LocalWP deploys
 - `docs/phases` documents the phased refactor (00 → 02)
 - `.github/workflows/ci.yml` runs the release checks
 

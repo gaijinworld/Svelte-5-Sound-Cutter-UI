@@ -1,6 +1,6 @@
 {
-  "visibleVersion": "2026.10.06.01",
-  "buildDate": "2026-10-06",
+  "visibleVersion": "2026.10.07.01",
+  "buildDate": "2026-10-07",
   "appName": "Audio Splitter",
   "upstreams": {
     "app": {

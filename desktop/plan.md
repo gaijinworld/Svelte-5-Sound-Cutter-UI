@@ -280,7 +280,7 @@ New script in root `package.json`:
 `copy-renderer.cjs` mirrors `copy-app-dist.cjs`: `../build → desktop/dist/renderer`,
 fatal-with-instructions if missing.
 
-The WP-specific bits degrade gracefully: `MP3SPLITTER_RUNTIME_CONFIG` is absent
+The WP-specific bits degrade gracefully: `AUDIOSPLITTER_RUNTIME_CONFIG` is absent
 → renderer falls back to defaults; desktop injects `MP3S_DESKTOP_ENV` instead.
 Title bar: `Audio Splitter v<version>` with `page-title-updated` →
 `event.preventDefault()` (reference pattern) so the SPA's static `<title>`

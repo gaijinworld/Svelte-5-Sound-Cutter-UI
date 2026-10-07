@@ -3,7 +3,7 @@
  * Plugin Name: Audio Splitter App (Production V1)
  * Plugin URI: https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI
  * Description: Browser-local audio splitter; ordered split points, lossless/precise FFmpeg.wasm export, batch ZIP download.
- * Version: 2026.10.06.01
+ * Version: 2026.10.07.01
  * Author: GaijinWorld
  * Author URI: https://github.com/gaijinworld
  * License: MIT
@@ -13,18 +13,18 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MP3S_PLUGIN_VERSION', '2026.10.06.01');
-define('MP3S_PLUGIN_FILE', __FILE__);
-define('MP3S_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('MP3S_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('MP3S_PAGE_SLUG', 'mp3-splitter');
-define('MP3S_PAGE_TITLE', 'Audio Splitter');
-define('MP3S_SHORTCODE', 'mp3_splitter');
+define('AUDS_PLUGIN_VERSION', '2026.10.07.01');
+define('AUDS_PLUGIN_FILE', __FILE__);
+define('AUDS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('AUDS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('AUDS_PAGE_SLUG', 'audio-splitter');
+define('AUDS_PAGE_TITLE', 'Audio Splitter');
+define('AUDS_SHORTCODE', 'audio_splitter');
 
-final class MP3S_Plugin {
-    private static ?MP3S_Plugin $instance = null;
+final class AUDS_Plugin {
+    private static ?AUDS_Plugin $instance = null;
 
-    public static function instance(): MP3S_Plugin {
+    public static function instance(): AUDS_Plugin {
         if (self::$instance === null) {
             self::$instance = new self();
         }
@@ -32,7 +32,7 @@ final class MP3S_Plugin {
     }
 
     private function __construct() {
-        add_shortcode(MP3S_SHORTCODE, [$this, 'render_shortcode']);
+        add_shortcode(AUDS_SHORTCODE, [$this, 'render_shortcode']);
         add_filter('document_title_parts', [$this, 'filter_document_title']);
         add_filter('autoptimize_filter_js_exclude', [$this, 'filter_autoptimize_js_exclude']);
     }
@@ -42,33 +42,33 @@ final class MP3S_Plugin {
      * <title> so the tab shows the version even before hydration.
      */
     public function filter_document_title(array $title): array {
-        if (is_page(MP3S_PAGE_SLUG)) {
-            $title['title'] = 'Audio Splitter App v' . MP3S_PLUGIN_VERSION . ' Live';
+        if (is_page(AUDS_PAGE_SLUG)) {
+            $title['title'] = 'Audio Splitter App v' . AUDS_PLUGIN_VERSION . ' Live';
         }
         return $title;
     }
 
     /**
-     * Self-install the /mp3-splitter/ page on activation.
+     * Self-install the /audio-splitter/ page on activation.
      */
     public static function activate(): void {
-        $page = get_page_by_path(MP3S_PAGE_SLUG);
+        $page = get_page_by_path(AUDS_PAGE_SLUG);
         if ($page instanceof WP_Post) {
-            if (strpos($page->post_content, '[' . MP3S_SHORTCODE . ']') === false) {
+            if (strpos($page->post_content, '[' . AUDS_SHORTCODE . ']') === false) {
                 wp_update_post([
                     'ID' => $page->ID,
-                    'post_content' => trim($page->post_content . "\n\n[" . MP3S_SHORTCODE . ']'),
+                    'post_content' => trim($page->post_content . "\n\n[" . AUDS_SHORTCODE . ']'),
                 ]);
             }
             return;
         }
 
         wp_insert_post([
-            'post_title' => MP3S_PAGE_TITLE,
-            'post_name' => MP3S_PAGE_SLUG,
+            'post_title' => AUDS_PAGE_TITLE,
+            'post_name' => AUDS_PAGE_SLUG,
             'post_status' => 'publish',
             'post_type' => 'page',
-            'post_content' => '[' . MP3S_SHORTCODE . ']',
+            'post_content' => '[' . AUDS_SHORTCODE . ']',
             'comment_status' => 'closed',
             'ping_status' => 'closed',
         ]);
@@ -82,13 +82,13 @@ final class MP3S_Plugin {
      * data: URI.
      */
     public function filter_autoptimize_js_exclude(string $exclude): string {
-        return $exclude . ',__sveltekit,MP3SPLITTER_RUNTIME_CONFIG';
+        return $exclude . ',__sveltekit,AUDIOSPLITTER_RUNTIME_CONFIG';
     }
 
     public function render_shortcode(): string {
         $markup = $this->get_app_markup();
         if ($markup === null) {
-            return '<div class="mp3s-build-error" role="alert">Audio Splitter is temporarily unavailable because its application assets are missing. Deploy the production frontend build or contact the site administrator.</div>';
+            return '<div class="auds-build-error" role="alert">Audio Splitter is temporarily unavailable because its application assets are missing. Deploy the production frontend build or contact the site administrator.</div>';
         }
         // <!--noptimize--> tells Autoptimize to leave this whole block alone.
         return "<!--noptimize-->\n" . $this->get_runtime_config_tag() . "\n" . $markup . "\n<!--/noptimize-->";
@@ -97,16 +97,16 @@ final class MP3S_Plugin {
     private function get_runtime_config(): array {
         $request_scheme = is_ssl() ? 'https' : 'http';
         return [
-            'visibleVersion' => MP3S_PLUGIN_VERSION,
-            'appName' => MP3S_PAGE_TITLE,
-            'routeBase' => esc_url_raw(set_url_scheme(home_url('/' . MP3S_PAGE_SLUG . '/'), $request_scheme)),
+            'visibleVersion' => AUDS_PLUGIN_VERSION,
+            'appName' => AUDS_PAGE_TITLE,
+            'routeBase' => esc_url_raw(set_url_scheme(home_url('/' . AUDS_PAGE_SLUG . '/'), $request_scheme)),
             'siteOrigin' => esc_url_raw(set_url_scheme(home_url('/'), $request_scheme)),
-            'runtimeContractUrl' => esc_url_raw(MP3S_PLUGIN_URL . 'runtime-contract.json'),
+            'runtimeContractUrl' => esc_url_raw(AUDS_PLUGIN_URL . 'runtime-contract.json'),
         ];
     }
 
     private function get_runtime_config_tag(): string {
-        return '<script>window.MP3SPLITTER_RUNTIME_CONFIG = ' . wp_json_encode($this->get_runtime_config()) . ';</script>';
+        return '<script>window.AUDIOSPLITTER_RUNTIME_CONFIG = ' . wp_json_encode($this->get_runtime_config()) . ';</script>';
     }
 
     /**
@@ -115,7 +115,7 @@ final class MP3S_Plugin {
      * plugin's assets/dist URL, so all emitted URLs are already absolute.
      */
     private function get_app_markup(): ?string {
-        $index_path = MP3S_PLUGIN_DIR . 'assets/dist/index.html';
+        $index_path = AUDS_PLUGIN_DIR . 'assets/dist/index.html';
         if (!is_readable($index_path)) {
             return null;
         }
@@ -134,6 +134,6 @@ final class MP3S_Plugin {
     }
 }
 
-register_activation_hook(MP3S_PLUGIN_FILE, ['MP3S_Plugin', 'activate']);
+register_activation_hook(AUDS_PLUGIN_FILE, ['AUDS_Plugin', 'activate']);
 
-MP3S_Plugin::instance();
+AUDS_Plugin::instance();
