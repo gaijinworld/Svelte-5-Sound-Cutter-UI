@@ -4,6 +4,19 @@ Browser-local audio splitter built with SvelteKit (Svelte 5), WaveSurfer.js, and
 
 ![Audio Splitter app screenshot](./preview.png
 
+## Download
+
+Audio Splitter can be installed on Windows 10/11 on Intel or AMD CPU.
+
+Pre-built Windows x64 executables are published on the [GitHub Releases page](https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI/releases). The portable `.exe` can be double-clicked with no installation required.
+
+| Format | Link |
+| --- | --- |
+| Windows installer | [Download](https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI/releases/latest) |
+| Windows portable | [Download](https://github.com/gaijinworld/Svelte-5-Sound-Cutter-UI/releases/latest) |
+
+Releases are built automatically by GitHub Actions when a version tag (e.g. `v2026.10.07.01`) is pushed. See the [Release workflow](.github/workflows/release-desktop.yml) for details. Unsigned builds show a Windows SmartScreen prompt — this is expected.
+
 ## Features
 - Open an audio file and see its waveform instantly — MP3, WAV, M4A, AAC, OGG/Opus, FLAC, and WMA (WMA decodes via ffmpeg.wasm for the preview)
 - Add ordered split points (button, `S` key, or click); contiguous segments are derived automatically
